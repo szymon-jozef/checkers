@@ -5,7 +5,7 @@ use crate::logic::{
 };
 use std::ops::Index;
 
-use uuid::Uuid;
+use log::{debug, info};
 
 pub struct Board {
     board: Vec<Field>,
@@ -17,6 +17,8 @@ impl Board {
     pub fn new(player1: &Player, player2: &Player, size: Option<usize>) -> Self {
         let size = size.unwrap_or(8);
 
+        info!("Creating new board of size: {}", size);
+
         let board: Vec<Field> = (0..size)
             .flat_map(|row| {
                 (0..size).map(move |column| {
@@ -27,17 +29,21 @@ impl Board {
 
                     // first player's pawns
                     if row < 3 && is_valid_place_for_a_pawn {
+                        debug!("Placing new pawn at: {}, owned by: {}", position, player1);
+
                         Field {
                             position,
                             pawn: Some(Pawn::new(position, &player1)),
                         }
                     } else if row >= size - 3 && is_valid_place_for_a_pawn {
+                        debug!("Placing new pawn at: {}, owned by: {}", position, player2);
                         Field {
                             position,
                             pawn: Some(Pawn::new(position, &player2)),
                         }
                     } else {
                         // no pawn
+                        debug!("Not placing any pawn at: {}", position);
                         Field {
                             position,
                             pawn: None,
@@ -69,8 +75,14 @@ mod tests {
 
     use super::*;
 
+    fn init_logger() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
     #[test]
     fn new_board_test() {
+        init_logger();
+
         let player1: Player = Player {
             name: String::from("Morbius"),
             id: Uuid::new_v4(),
