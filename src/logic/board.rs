@@ -121,8 +121,7 @@ impl Index<Position> for Board {
     type Output = Field;
 
     fn index(&self, index: Position) -> &Self::Output {
-        let index = index.row * &self.size + index.column;
-        &self.board[index]
+        &self[index.row][index.column]
     }
 }
 
@@ -136,8 +135,7 @@ impl IndexMut<usize> for Board {
 
 impl IndexMut<Position> for Board {
     fn index_mut(&mut self, index: Position) -> &mut Self::Output {
-        let index = index.row * &self.size + index.column;
-        &mut self.board[index]
+        &mut self[index.row][index.column]
     }
 }
 
