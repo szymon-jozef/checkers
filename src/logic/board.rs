@@ -32,22 +32,23 @@ impl Board {
                     let is_valid_place_for_a_pawn: bool = is_row_even ^ is_column_even;
                     let position: Position = Position { row, column };
 
-                    // first player's pawns
-                    if row < 3 && is_valid_place_for_a_pawn {
-                        debug!("Placing new pawn at: {}, owned by: {}", position, &p1_ref);
+                    let current_player: Option<&Player> = if row < 3 {
+                        Some(p1_ref)
+                    } else if row >= size - 3 {
+                        Some(p2_ref)
+                    } else {
+                        None
+                    };
 
+                    if let Some(player) = current_player
+                        && is_valid_place_for_a_pawn
+                    {
+                        debug!("Placing new pawn at: {}, owned by: {}", position, player);
                         Field {
                             position,
-                            pawn: Some(Pawn::new(position, &p1_ref)),
-                        }
-                    } else if row >= size - 3 && is_valid_place_for_a_pawn {
-                        debug!("Placing new pawn at: {}, owned by: {}", position, &p2_ref);
-                        Field {
-                            position,
-                            pawn: Some(Pawn::new(position, &p2_ref)),
+                            pawn: Some(Pawn::new(position, player)),
                         }
                     } else {
-                        // no pawn
                         debug!("Not placing any pawn at: {}", position);
                         Field {
                             position,
