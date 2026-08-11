@@ -1,11 +1,11 @@
 use crate::logic::{
-    pawn::Pawn,
+    pawn::{Pawn, PawnState},
     player::Player,
     utils::{Field, Position},
 };
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
-use log::{debug, info};
+use log::{debug, info, warn};
 
 pub struct Board {
     board: Vec<Field>,
@@ -13,11 +13,16 @@ pub struct Board {
 }
 
 impl Board {
-    /// Board is always a square. Size parameter is a side of this rectangle. Defaults to 8
-    pub fn new(player1: &Player, player2: &Player, size: Option<usize>) -> Self {
+    /// Board is always a square. Size parameter is a side of this square. Defaults to 8
+    pub fn new(player1: &mut Player, player2: &mut Player, size: Option<usize>) -> Self {
         let size = size.unwrap_or(8);
 
         info!("Creating new board of size: {}", size);
+        player1.end_row = size - 1;
+        player2.end_row = 0;
+
+        let p1_ref: &Player = &*player1;
+        let p2_ref: &Player = &*player2;
 
         let board: Vec<Field> = (0..size)
             .flat_map(|row| {
@@ -29,17 +34,17 @@ impl Board {
 
                     // first player's pawns
                     if row < 3 && is_valid_place_for_a_pawn {
-                        debug!("Placing new pawn at: {}, owned by: {}", position, player1);
+                        debug!("Placing new pawn at: {}, owned by: {}", position, &p1_ref);
 
                         Field {
                             position,
-                            pawn: Some(Pawn::new(position, &player1)),
+                            pawn: Some(Pawn::new(position, &p1_ref)),
                         }
                     } else if row >= size - 3 && is_valid_place_for_a_pawn {
-                        debug!("Placing new pawn at: {}, owned by: {}", position, player2);
+                        debug!("Placing new pawn at: {}, owned by: {}", position, &p2_ref);
                         Field {
                             position,
-                            pawn: Some(Pawn::new(position, &player2)),
+                            pawn: Some(Pawn::new(position, &p2_ref)),
                         }
                     } else {
                         // no pawn
@@ -55,6 +60,51 @@ impl Board {
 
         Board { board, size }
     }
+
+    /// Checks if move from position to position is valid.
+    /// It returns true if you want to move pawn from position to position where there is no pawn
+    ///
+    /// Doesn't check turn
+    ///
+    /// Not meant for capturing
+    fn is_move_valid(&self, from: &Position, to: &Position) -> bool {
+        if let Some(_) = &self[from.row][from.column].pawn {
+            self[to.row][to.column].pawn.is_none()
+        } else {
+            false
+        }
+    }
+
+    fn is_player_owner_of_the_pawn(&self, player: &Player, pawn: &Pawn) -> bool {
+        player.id == pawn.owner
+    }
+
+    /// Returns true if move was successful
+    pub fn move_pawn(&mut self, player: &Player, from: Position, to: Position) -> bool {
+        if !self.is_move_valid(&from, &to) {
+            warn!("Tried invalid move: {} -> {}", from, to);
+            return false;
+        }
+
+        if !self.is_player_owner_of_the_pawn(&player, self[from].pawn.as_ref().unwrap()) {
+            warn!("Player {} tried moving a pawn which he doesn own!", player);
+            debug!("Tried moving from {} to {}", from, to);
+            return false;
+        }
+
+        // we can safely unwrap, because if there's not pawn function returns false earlier
+        let mut mowing_pawn: Pawn = self[from].pawn.take().unwrap();
+
+        if to.row == player.end_row || matches!(mowing_pawn.state, PawnState::Dame(_)) {
+            mowing_pawn.state = super::pawn::PawnState::Dame(to);
+        } else {
+            mowing_pawn.state = super::pawn::PawnState::Man(to);
+        }
+
+        self[to.row][to.column].pawn = Some(mowing_pawn);
+
+        true
+    }
 }
 
 impl Index<usize> for Board {
@@ -67,10 +117,32 @@ impl Index<usize> for Board {
     }
 }
 
+impl Index<Position> for Board {
+    type Output = Field;
+
+    fn index(&self, index: Position) -> &Self::Output {
+        let index = index.row * &self.size + index.column;
+        &self.board[index]
+    }
+}
+
+impl IndexMut<usize> for Board {
+    fn index_mut<'a>(&'a mut self, i: usize) -> &'a mut [Field] {
+        let start = i * &self.size;
+        let end: usize = start + &self.size;
+        &mut self.board[start..end]
+    }
+}
+
+impl IndexMut<Position> for Board {
+    fn index_mut(&mut self, index: Position) -> &mut Self::Output {
+        let index = index.row * &self.size + index.column;
+        &mut self.board[index]
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use uuid::Uuid;
-
     use crate::logic::pawn::PawnState;
 
     use super::*;
@@ -83,17 +155,10 @@ mod tests {
     fn new_board_test() {
         init_logger();
 
-        let player1: Player = Player {
-            name: String::from("Morbius"),
-            id: Uuid::new_v4(),
-        };
+        let mut player1: Player = Player::new("Morbius".to_string());
+        let mut player2: Player = Player::new("Milo".to_string());
 
-        let player2: Player = Player {
-            name: String::from("Milo"),
-            id: Uuid::new_v4(),
-        };
-
-        let test_board: Board = Board::new(&player1, &player2, None);
+        let test_board: Board = Board::new(&mut player1, &mut player2, None);
         let size: usize = test_board.size;
 
         for row in 0..size {
@@ -135,5 +200,72 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_overloaded_operators() {
+        init_logger();
+
+        let mut player1: Player = Player::new("Morbius".to_string());
+        let mut player2: Player = Player::new("Milo".to_string());
+
+        let test_board: Board = Board::new(&mut player1, &mut player2, None);
+
+        let row1 = 0;
+        let column1 = 0;
+
+        let position1: Position = Position {
+            row: row1,
+            column: column1,
+        };
+
+        let row2 = row1;
+        let column2 = 1;
+
+        let position2: Position = Position {
+            row: row2,
+            column: column2,
+        };
+
+        assert_eq!(test_board[row1][column1], test_board[position1]);
+        assert_eq!(test_board[row2][column2], test_board[position2]);
+
+        assert!(test_board[position1].pawn.is_none());
+        assert!(test_board[position2].pawn.is_some());
+    }
+
+    #[test]
+    fn test_moving_pawn() {
+        init_logger();
+
+        let mut player1: Player = Player::new("Morbius".to_string());
+        let mut player2: Player = Player::new("Milo".to_string());
+
+        let mut test_board: Board = Board::new(&mut player1, &mut player2, None);
+
+        // we cant move pawn into another pawn; this should fail
+        assert!(!test_board.move_pawn(
+            &player1,
+            Position { row: 0, column: 1 },
+            Position { row: 1, column: 0 },
+        ));
+
+        // player can't move pawn that he doesn't own; this should fail
+        assert!(!test_board.move_pawn(
+            &player2,
+            Position { row: 2, column: 1 },
+            Position { row: 3, column: 0 },
+        ));
+
+        // walid move
+        assert!(test_board.move_pawn(
+            &player1,
+            Position { row: 2, column: 1 },
+            Position { row: 3, column: 0 }
+        ));
+
+        assert!(test_board[3][0].pawn.is_some());
+        assert_eq!(test_board[3][0].pawn.as_ref().unwrap().owner, player1.id);
+        assert!(test_board[2][1].pawn.is_none());
     }
 }

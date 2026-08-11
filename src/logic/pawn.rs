@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 use crate::logic::{player::Player, utils::Position};
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum PawnState {
     Man(Position),
     Dame(Position),
@@ -10,6 +10,7 @@ pub enum PawnState {
 }
 
 /// Basic pawn
+#[derive(Debug, PartialEq, Eq)]
 pub struct Pawn {
     pub state: PawnState,
     pub owner: Uuid,
