@@ -1,0 +1,12 @@
+[package]
+name = "Checkers"
+description = "Game of checkers"
+version = "0.0.1"
+readme = "README.md"
+license = "gpl3"
+repository = "https://example.com"
+authors = [ "szymon-jozef" ]
+
+edition = "2024"
+
+[dependencies]
