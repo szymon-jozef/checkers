@@ -26,12 +26,12 @@ impl Board {
                     let position: Position = Position { row, column };
 
                     // first player's pawns
-                    if row <= 3 && is_valid_place_for_a_pawn {
+                    if row < 3 && is_valid_place_for_a_pawn {
                         Field {
                             position,
                             pawn: Some(Pawn::new(position, &player1)),
                         }
-                    } else if row > size - 3 && row <= size && is_valid_place_for_a_pawn {
+                    } else if row >= size - 3 && is_valid_place_for_a_pawn {
                         Field {
                             position,
                             pawn: Some(Pawn::new(position, &player2)),
@@ -91,14 +91,37 @@ mod tests {
             }
         }
 
-        assert!(test_board[0][0].pawn.is_none());
-        assert!(test_board[0][1].pawn.is_some());
+        for row in 0..size {
+            for column in 0..size {
+                let is_row_even: bool = row % 2 == 0;
+                let is_column_even: bool = column % 2 == 0;
+                let is_valid_place_for_a_pawn: bool =
+                    (is_row_even ^ is_column_even) && (row < 3 || row >= size - 3);
 
-        // we unwrap, because some value has to be here, if it's not then something is wrong
-        // beside we check for that in the assert above
-        assert!(
-            test_board[0][1].pawn.as_ref().unwrap().state
-                == PawnState::Man(Position { row: 0, column: 1 })
-        );
+                if is_valid_place_for_a_pawn {
+                    assert!(test_board[row][column].pawn.is_some());
+                    // we unwrap, because some value has to be here, if it's not then something is wrong
+                    // beside we check for that in the assert above
+                    assert!(
+                        test_board[row][column].pawn.as_ref().unwrap().state
+                            == PawnState::Man(Position { row, column })
+                    );
+
+                    if row < 3 {
+                        assert_eq!(
+                            test_board[row][column].pawn.as_ref().unwrap().owner,
+                            player1.id
+                        )
+                    } else if row >= size - 3 {
+                        assert_eq!(
+                            test_board[row][column].pawn.as_ref().unwrap().owner,
+                            player2.id
+                        )
+                    }
+                } else {
+                    assert!(test_board[row][column].pawn.is_none());
+                }
+            }
+        }
     }
 }
