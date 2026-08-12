@@ -1,8 +1,4 @@
-use crate::logic::{
-    pawn::{self, Pawn, PawnState},
-    player::Player,
-    utils::{Field, Position},
-};
+use crate::logic::{field::Field, pawn::Pawn, player::Player, utils::Position};
 use std::ops::{Index, IndexMut};
 
 use log::{debug, info, warn};
