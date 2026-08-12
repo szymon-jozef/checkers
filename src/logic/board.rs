@@ -85,50 +85,64 @@ impl Board {
         player.id == pawn.owner
     }
 
-    fn is_step_valid(&self, pos: Option<Position>) -> bool {
-        pos.is_some_and(|pos| pos.is_in_range(self.size) && self[pos].pawn.is_none())
+    fn is_position_empty(&self, pos: Position) -> bool {
+        pos.is_in_range(self.size) && self[pos].pawn.is_none()
     }
 
     fn is_movable(&self, pos: Position, player: &Player) -> bool {
+        self.get_available_moves(pos, player)
+            .is_some_and(|moves| !moves.is_empty())
+    }
+
+    fn get_available_moves(&self, pos: Position, player: &Player) -> Option<Vec<Position>> {
+        let mut available_moves: Vec<Position> = vec![];
+        let mut possible_directions: Vec<DeltaPosition> = vec![];
+
         if !pos.is_in_range(self.size) {
             debug!(
-                "Tried checking if pos: {} is movable, but it's out of bounds!",
+                "get_possible_moves got a value: {} that was out of range!",
                 pos
             );
-            return false;
+            return None;
         }
 
         let Some(pawn) = &self[pos].pawn else {
-            return false;
+            return None;
         };
 
         let Some(direction) = player.vertical_direction else {
-            debug!(
-                "Tried checking if player: {} can move his pawn, but their direction is not yet set!",
-                player.id
-            );
-            return false;
+            debug!("Player: {} doesn't have a direction set!", player.id);
+            return None;
         };
 
-        let left_up: DeltaPosition = DeltaPosition { row: 0, column: -1 } + direction;
-        let right_up: DeltaPosition = DeltaPosition { row: 0, column: 1 } + direction;
+        possible_directions.push(DeltaPosition { row: 0, column: -1 } + direction);
+        possible_directions.push(DeltaPosition { row: 0, column: 1 } + direction);
 
-        match pawn.state {
-            PawnState::Man => {
-                self.is_step_valid(pos.checked_add(&left_up))
-                    || self.is_step_valid(pos.checked_add(&right_up))
-            }
-            PawnState::Dame => {
-                let left_down: DeltaPosition = DeltaPosition { row: 0, column: -1 } - direction;
-                let right_down: DeltaPosition = DeltaPosition { row: 0, column: 1 } - direction;
+        let max_multiplier: usize;
 
-                self.is_step_valid(pos.checked_add(&left_up))
-                    || self.is_step_valid(pos.checked_add(&right_up))
-                    || self.is_step_valid(pos.checked_add(&left_down))
-                    || self.is_step_valid(pos.checked_add(&right_down))
-            }
-            PawnState::Captured => false,
+        if pawn.state == PawnState::Dame {
+            possible_directions.push(DeltaPosition { row: 0, column: -1 } - direction);
+            possible_directions.push(DeltaPosition { row: 0, column: 1 } - direction);
+            max_multiplier = self.size - 1;
+        } else {
+            max_multiplier = 1;
         }
+
+        for direction in &possible_directions {
+            for multiplier in 1..=max_multiplier {
+                if let Some(new_pos) = pos.checked_add(&(*direction * multiplier)) {
+                    if self.is_position_empty(new_pos) {
+                        available_moves.push(new_pos);
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        Some(available_moves)
     }
 
     pub fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
