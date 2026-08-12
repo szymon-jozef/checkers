@@ -74,11 +74,11 @@ impl Board {
     ///
     /// Not meant for capturing
     fn is_move_valid(&self, from: &Position, to: &Position) -> bool {
-        if let Some(_) = &self[from.row][from.column].pawn {
-            self[to.row][to.column].pawn.is_none()
-        } else {
-            false
-        }
+        let Some(_) = &self[*from].pawn else {
+            return false;
+        };
+
+        self[*to].pawn.is_none()
     }
 
     fn is_player_owner_of_the_pawn(&self, player: &Player, pawn: &Pawn) -> bool {
