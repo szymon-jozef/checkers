@@ -2,11 +2,13 @@ use std::fmt::Display;
 
 use uuid::Uuid;
 
+use crate::logic::utils::DeltaPosition;
+
 pub struct Player {
     pub name: String,
     pub id: Uuid,
-    /// Row where players pawns turn into dames
-    pub end_row: usize,
+    pub vertical_direction: Option<DeltaPosition>,
+    pub end_row: Option<usize>,
 }
 
 impl Player {
@@ -14,17 +16,28 @@ impl Player {
         Player {
             name,
             id: Uuid::new_v4(),
-            end_row: 0,
+            end_row: None,
+            vertical_direction: None,
         }
     }
 }
 
 impl Display for Player {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let end_row_str = match self.end_row {
+            Some(row) => row.to_string(),
+            None => "None".to_string(),
+        };
+
+        let direction_str = match &self.vertical_direction {
+            Some(direction) => direction.to_string(),
+            None => "None".to_string(),
+        };
+
         write!(
             f,
-            "(name: {}, id: {}, end_row: {})",
-            self.name, self.id, self.end_row
+            "(name: {}, id: {}, end_row: {}, vertical_direction: {})",
+            self.name, self.id, end_row_str, direction_str
         )
     }
 }

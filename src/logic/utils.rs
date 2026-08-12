@@ -1,4 +1,5 @@
 use core::fmt;
+use std::ops::Add;
 
 use log::debug;
 
@@ -29,12 +30,34 @@ impl Position {
             column: new_column,
         })
     }
+
+    pub fn is_in_range(&self, range: usize) -> bool {
+        self.row < range && self.column < range
+    }
 }
 
 /// Vector for moving `Position`
+#[derive(Debug, Copy, Clone)]
 pub struct DeltaPosition {
     pub row: i8,
     pub column: i8,
+}
+
+impl fmt::Display for DeltaPosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.row, self.column)
+    }
+}
+
+impl Add for DeltaPosition {
+    type Output = DeltaPosition;
+
+    fn add(self, rhs: DeltaPosition) -> Self::Output {
+        DeltaPosition {
+            row: self.row + rhs.row,
+            column: self.column + rhs.column,
+        }
+    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,9 @@
-use crate::logic::{field::Field, pawn::Pawn, player::Player, utils::Position};
+use crate::logic::{
+    field::Field,
+    pawn::{Pawn, PawnState},
+    player::Player,
+    utils::{DeltaPosition, Position},
+};
 use std::ops::{Index, IndexMut};
 
 use log::{debug, info, warn};
@@ -14,8 +19,12 @@ impl Board {
         let size = size.unwrap_or(8);
 
         info!("Creating new board of size: {}", size);
-        player1.end_row = size - 1;
-        player2.end_row = 0;
+        player1.end_row = Some(size - 1);
+        player1.vertical_direction = Some(crate::logic::utils::DeltaPosition { row: 1, column: 0 });
+
+        player2.end_row = Some(0);
+        player2.vertical_direction =
+            Some(crate::logic::utils::DeltaPosition { row: -1, column: 0 });
 
         let p1_ref: &Player = &*player1;
         let p2_ref: &Player = &*player2;
@@ -76,6 +85,55 @@ impl Board {
         player.id == pawn.owner
     }
 
+    fn is_movable(&self, pos: Position, player: &Player) -> bool {
+        if !pos.is_in_range(self.size) {
+            debug!(
+                "Tried checking if pos: {} is movable, but it's out of bounds!",
+                pos
+            );
+            return false;
+        }
+
+        let Some(pawn) = &self[pos].pawn else {
+            return false;
+        };
+
+        let Some(direction) = player.vertical_direction else {
+            debug!(
+                "Tried checking if player: {} can move his pawn, but their direction is not yet set!",
+                player.id
+            );
+            return false;
+        };
+
+        let left_up: DeltaPosition = DeltaPosition { row: 0, column: -1 } + direction;
+        let right_up: DeltaPosition = DeltaPosition { row: 0, column: 1 } + direction;
+
+        match pawn.state {
+            PawnState::Man => {
+                if let Some(left_pos) = pos.checked_add(&left_up)
+                    && left_pos.is_in_range(self.size)
+                    && self[left_pos].pawn.is_none()
+                {
+                    return true;
+                }
+
+                if let Some(right_pos) = pos.checked_add(&right_up)
+                    && right_pos.is_in_range(self.size)
+                    && self[right_pos].pawn.is_none()
+                {
+                    return true;
+                }
+
+                false
+            }
+            PawnState::Dame => {
+                todo!();
+            }
+            PawnState::Captured => false,
+        }
+    }
+
     fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
         self.board
             .iter()
@@ -104,10 +162,18 @@ impl Board {
             return false;
         }
 
+        let Some(end_row) = player.end_row else {
+            warn!(
+                "Tried moving pawn of player {}, who wasn't initialized by the board!",
+                player.id
+            );
+            return false;
+        };
+
         // we can safely unwrap, because if there's not pawn function returns false earlier
         let mut mowing_pawn: Pawn = self[from].pawn.take().unwrap();
 
-        if to.row == player.end_row {
+        if to.row == end_row {
             mowing_pawn.state = super::pawn::PawnState::Dame;
         }
 
@@ -303,5 +369,24 @@ mod tests {
             expected_positions,
             test_board.get_player_pawns_positions(&p1)
         );
+    }
+
+    #[test]
+    fn test_is_movable() {
+        init_logger();
+
+        let mut p1: Player = Player::new("Morbius".to_string());
+        let mut p2: Player = Player::new("Milo".to_string());
+        let test_board: Board = Board::new(&mut p1, &mut p2, None);
+
+        assert!(test_board.is_movable(Position { row: 2, column: 1 }, &p1));
+        assert!(!test_board.is_movable(
+            Position {
+                row: 10,
+                column: 12
+            },
+            &p1
+        ));
+        assert!(!test_board.is_movable(Position { row: 0, column: 0 }, &p1));
     }
 }
