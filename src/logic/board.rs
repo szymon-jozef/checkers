@@ -128,13 +128,44 @@ impl Board {
                 false
             }
             PawnState::Dame => {
-                todo!();
+                let left_down: DeltaPosition = DeltaPosition { row: 0, column: -1 } - direction;
+                let right_down: DeltaPosition = DeltaPosition { row: 0, column: 1 } - direction;
+
+                if let Some(left_up_pos) = pos.checked_add(&(left_up))
+                    && left_up_pos.is_in_range(self.size)
+                    && self[left_up_pos].pawn.is_none()
+                {
+                    return true;
+                }
+
+                if let Some(right_up_pos) = pos.checked_add(&right_up)
+                    && right_up_pos.is_in_range(self.size)
+                    && self[right_up_pos].pawn.is_none()
+                {
+                    return true;
+                }
+
+                if let Some(left_down_pos) = pos.checked_add(&left_down)
+                    && left_down_pos.is_in_range(self.size)
+                    && self[left_down_pos].pawn.is_none()
+                {
+                    return true;
+                }
+
+                if let Some(right_down_pos) = pos.checked_add(&right_down)
+                    && right_down_pos.is_in_range(self.size)
+                    && self[right_down_pos].pawn.is_none()
+                {
+                    return true;
+                }
+
+                false
             }
             PawnState::Captured => false,
         }
     }
 
-    fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
+    pub fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
         self.board
             .iter()
             .filter_map(|field| {

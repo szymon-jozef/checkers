@@ -1,5 +1,5 @@
 use core::fmt;
-use std::ops::Add;
+use std::ops::{Add, Mul, Sub};
 
 use log::debug;
 
@@ -56,6 +56,28 @@ impl Add for DeltaPosition {
         DeltaPosition {
             row: self.row + rhs.row,
             column: self.column + rhs.column,
+        }
+    }
+}
+
+impl Sub for DeltaPosition {
+    type Output = DeltaPosition;
+
+    fn sub(self, rhs: DeltaPosition) -> Self::Output {
+        DeltaPosition {
+            row: self.row - rhs.row,
+            column: self.column - rhs.column,
+        }
+    }
+}
+
+impl Mul<usize> for DeltaPosition {
+    type Output = DeltaPosition;
+
+    fn mul(self, rhs: usize) -> Self::Output {
+        DeltaPosition {
+            row: self.row * rhs as i8,
+            column: self.column * rhs as i8,
         }
     }
 }
