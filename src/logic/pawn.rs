@@ -4,8 +4,8 @@ use crate::logic::{player::Player, utils::Position};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum PawnState {
-    Man(Position),
-    Dame(Position),
+    Man,
+    Dame,
     Captured,
 }
 
@@ -17,9 +17,9 @@ pub struct Pawn {
 }
 
 impl Pawn {
-    pub fn new(start_pos: Position, owner: &Player) -> Self {
+    pub fn new(owner: &Player) -> Self {
         Self {
-            state: PawnState::Man(start_pos),
+            state: PawnState::Man,
             owner: owner.id,
         }
     }

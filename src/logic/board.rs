@@ -46,7 +46,7 @@ impl Board {
                         debug!("Placing new pawn at: {}, owned by: {}", position, player);
                         Field {
                             position,
-                            pawn: Some(Pawn::new(position, player)),
+                            pawn: Some(Pawn::new(player)),
                         }
                     } else {
                         debug!("Not placing any pawn at: {}", position);
@@ -96,10 +96,8 @@ impl Board {
         // we can safely unwrap, because if there's not pawn function returns false earlier
         let mut mowing_pawn: Pawn = self[from].pawn.take().unwrap();
 
-        if to.row == player.end_row || matches!(mowing_pawn.state, PawnState::Dame(_)) {
-            mowing_pawn.state = super::pawn::PawnState::Dame(to);
-        } else {
-            mowing_pawn.state = super::pawn::PawnState::Man(to);
+        if to.row == player.end_row {
+            mowing_pawn.state = super::pawn::PawnState::Dame;
         }
 
         self[to.row][to.column].pawn = Some(mowing_pawn);
@@ -178,10 +176,7 @@ mod tests {
                     assert!(test_board[row][column].pawn.is_some());
                     // we unwrap, because some value has to be here, if it's not then something is wrong
                     // beside we check for that in the assert above
-                    assert!(
-                        test_board[row][column].pawn.as_ref().unwrap().state
-                            == PawnState::Man(Position { row, column })
-                    );
+                    assert!(test_board[row][column].pawn.as_ref().unwrap().state == PawnState::Man);
 
                     if row < 3 {
                         assert_eq!(
