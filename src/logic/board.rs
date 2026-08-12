@@ -76,6 +76,21 @@ impl Board {
         player.id == pawn.owner
     }
 
+    fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
+        self.board
+            .iter()
+            .filter_map(|field| {
+                if let Some(pawn) = &field.pawn
+                    && pawn.owner == player.id
+                {
+                    Some(field.position)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Returns true if move was successful
     pub fn move_pawn(&mut self, player: &Player, from: Position, to: Position) -> bool {
         if !self.is_move_valid(&from, &to) {
@@ -257,5 +272,36 @@ mod tests {
         assert!(test_board[3][0].pawn.is_some());
         assert_eq!(test_board[3][0].pawn.as_ref().unwrap().owner, player1.id);
         assert!(test_board[2][1].pawn.is_none());
+    }
+
+    #[test]
+    fn test_getting_player_pawns_positions() {
+        init_logger();
+
+        let mut p1: Player = Player::new("Morbius".to_string());
+        let mut p2: Player = Player::new("Milo".to_string());
+        let test_board: Board = Board::new(&mut p1, &mut p2, None);
+
+        let expected_positions: Vec<Position> = (0..test_board.size)
+            .into_iter()
+            .flat_map(|row| {
+                (0..test_board.size).filter_map(move |column| {
+                    let is_row_even: bool = row % 2 == 0;
+                    let is_column_even: bool = column % 2 == 0;
+                    let is_valid_place_for_a_pawn: bool = (is_row_even ^ is_column_even) && row < 3;
+
+                    if is_valid_place_for_a_pawn {
+                        Some(Position { row, column })
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+
+        assert_eq!(
+            expected_positions,
+            test_board.get_player_pawns_positions(&p1)
+        );
     }
 }
