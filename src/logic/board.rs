@@ -1,5 +1,5 @@
 use crate::logic::{
-    pawn::{Pawn, PawnState},
+    pawn::{self, Pawn, PawnState},
     player::Player,
     utils::{Field, Position},
 };
@@ -9,6 +9,7 @@ use log::{debug, info, warn};
 
 pub struct Board {
     board: Vec<Field>,
+    pawns_positions: Vec<Position>,
     pub size: usize,
 }
 
@@ -59,7 +60,16 @@ impl Board {
             })
             .collect();
 
-        Board { board, size }
+        let pawns_positions: Vec<Position> = board
+            .iter()
+            .filter_map(|field| field.pawn.as_ref().map(|_| field.position))
+            .collect();
+
+        Board {
+            board,
+            size,
+            pawns_positions,
+        }
     }
 
     /// Checks if move from position to position is valid.
