@@ -85,6 +85,10 @@ impl Board {
         player.id == pawn.owner
     }
 
+    fn is_step_valid(&self, pos: Option<Position>) -> bool {
+        pos.is_some_and(|pos| pos.is_in_range(self.size) && self[pos].pawn.is_none())
+    }
+
     fn is_movable(&self, pos: Position, player: &Player) -> bool {
         if !pos.is_in_range(self.size) {
             debug!(
@@ -111,55 +115,17 @@ impl Board {
 
         match pawn.state {
             PawnState::Man => {
-                if let Some(left_pos) = pos.checked_add(&left_up)
-                    && left_pos.is_in_range(self.size)
-                    && self[left_pos].pawn.is_none()
-                {
-                    return true;
-                }
-
-                if let Some(right_pos) = pos.checked_add(&right_up)
-                    && right_pos.is_in_range(self.size)
-                    && self[right_pos].pawn.is_none()
-                {
-                    return true;
-                }
-
-                false
+                self.is_step_valid(pos.checked_add(&left_up))
+                    || self.is_step_valid(pos.checked_add(&right_up))
             }
             PawnState::Dame => {
                 let left_down: DeltaPosition = DeltaPosition { row: 0, column: -1 } - direction;
                 let right_down: DeltaPosition = DeltaPosition { row: 0, column: 1 } - direction;
 
-                if let Some(left_up_pos) = pos.checked_add(&(left_up))
-                    && left_up_pos.is_in_range(self.size)
-                    && self[left_up_pos].pawn.is_none()
-                {
-                    return true;
-                }
-
-                if let Some(right_up_pos) = pos.checked_add(&right_up)
-                    && right_up_pos.is_in_range(self.size)
-                    && self[right_up_pos].pawn.is_none()
-                {
-                    return true;
-                }
-
-                if let Some(left_down_pos) = pos.checked_add(&left_down)
-                    && left_down_pos.is_in_range(self.size)
-                    && self[left_down_pos].pawn.is_none()
-                {
-                    return true;
-                }
-
-                if let Some(right_down_pos) = pos.checked_add(&right_down)
-                    && right_down_pos.is_in_range(self.size)
-                    && self[right_down_pos].pawn.is_none()
-                {
-                    return true;
-                }
-
-                false
+                self.is_step_valid(pos.checked_add(&left_up))
+                    || self.is_step_valid(pos.checked_add(&right_up))
+                    || self.is_step_valid(pos.checked_add(&left_down))
+                    || self.is_step_valid(pos.checked_add(&right_down))
             }
             PawnState::Captured => false,
         }
