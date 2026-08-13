@@ -1,5 +1,3 @@
-mod board;
-mod field;
+pub mod board;
 mod math;
-mod pawn;
 mod player;

@@ -1,14 +1,13 @@
 use crate::logic::{
-    field::Field,
+    board::{
+        field::Field,
+        pawn::{CapturePath, Pawn, PawnState},
+    },
     math::{position::Position, vector::Vector2D},
-    pawn::{CapturePath, Pawn, PawnState},
     player::Player,
 };
 
-use std::{
-    backtrace::BacktraceStatus::Captured,
-    ops::{Index, IndexMut},
-};
+use std::ops::{Index, IndexMut};
 
 use log::{debug, info, warn};
 
@@ -463,7 +462,6 @@ impl IndexMut<Position> for Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::logic::pawn::PawnState;
 
     use super::*;
 
