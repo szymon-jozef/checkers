@@ -1,9 +1,10 @@
 use crate::logic::{
     field::Field,
-    pawn::{Pawn, PawnState},
+    math::{position::Position, vector::Vector2D},
+    pawn::{CapturePath, Pawn, PawnState},
     player::Player,
-    utils::{CapturePath, DeltaPosition, Position},
 };
+
 use std::ops::{Index, IndexMut};
 
 use log::{debug, info, warn};
@@ -20,11 +21,10 @@ impl Board {
 
         info!("Creating new board of size: {}", size);
         player1.end_row = Some(size - 1);
-        player1.vertical_direction = Some(crate::logic::utils::DeltaPosition { row: 1, column: 0 });
+        player1.vertical_direction = Some(Vector2D { row: 1, column: 0 });
 
         player2.end_row = Some(0);
-        player2.vertical_direction =
-            Some(crate::logic::utils::DeltaPosition { row: -1, column: 0 });
+        player2.vertical_direction = Some(Vector2D { row: -1, column: 0 });
 
         let p1_ref: &Player = &*player1;
         let p2_ref: &Player = &*player2;
@@ -96,7 +96,7 @@ impl Board {
 
     fn get_available_moves(&self, pos: Position, player: &Player) -> Option<Vec<Position>> {
         let mut available_moves: Vec<Position> = vec![];
-        let mut possible_directions: Vec<DeltaPosition> = vec![];
+        let mut possible_directions: Vec<Vector2D> = vec![];
 
         if !pos.is_in_range(self.size) {
             debug!(
@@ -115,14 +115,14 @@ impl Board {
             return None;
         };
 
-        possible_directions.push(DeltaPosition { row: 0, column: -1 } + direction);
-        possible_directions.push(DeltaPosition { row: 0, column: 1 } + direction);
+        possible_directions.push(Vector2D { row: 0, column: -1 } + direction);
+        possible_directions.push(Vector2D { row: 0, column: 1 } + direction);
 
         let max_multiplier: usize;
 
         if pawn.state == PawnState::Dame {
-            possible_directions.push(DeltaPosition { row: 0, column: -1 } - direction);
-            possible_directions.push(DeltaPosition { row: 0, column: 1 } - direction);
+            possible_directions.push(Vector2D { row: 0, column: -1 } - direction);
+            possible_directions.push(Vector2D { row: 0, column: 1 } - direction);
             max_multiplier = self.size - 1;
         } else {
             max_multiplier = 1;
@@ -162,7 +162,7 @@ impl Board {
             return false;
         }
 
-        let delta_distance: DeltaPosition = to - from;
+        let delta_distance: Vector2D = to - from;
         let player_direction = player
             .vertical_direction
             .expect("Player vertical_direction not set!");

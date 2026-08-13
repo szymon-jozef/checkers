@@ -2,12 +2,12 @@ use std::fmt::Display;
 
 use uuid::Uuid;
 
-use crate::logic::utils::DeltaPosition;
+use crate::logic::math::vector::Vector2D;
 
 pub struct Player {
     pub name: String,
     pub id: Uuid,
-    pub vertical_direction: Option<DeltaPosition>,
+    pub vertical_direction: Option<Vector2D>,
     pub end_row: Option<usize>,
 }
 

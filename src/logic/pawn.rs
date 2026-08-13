@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::logic::{player::Player, utils::Position};
+use crate::logic::{math::position::Position, player::Player};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum PawnState {
@@ -23,4 +23,8 @@ impl Pawn {
             owner: owner.id,
         }
     }
+}
+
+pub struct CapturePath {
+    pub steps: Vec<Position>,
 }

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::logic::{pawn::Pawn, utils::Position};
+use crate::logic::{math::position::Position, pawn::Pawn};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Field {
