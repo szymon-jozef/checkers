@@ -36,6 +36,17 @@ impl Position {
     }
 }
 
+impl Sub for Position {
+    type Output = DeltaPosition;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        DeltaPosition {
+            row: self.row as i8 - rhs.row as i8,
+            column: self.column as i8 - rhs.column as i8,
+        }
+    }
+}
+
 /// Vector for moving `Position`
 #[derive(Debug, Copy, Clone)]
 pub struct DeltaPosition {
@@ -80,6 +91,10 @@ impl Mul<usize> for DeltaPosition {
             column: self.column * rhs as i8,
         }
     }
+}
+
+pub struct CapturePath {
+    pub steps: Vec<Position>,
 }
 
 #[cfg(test)]

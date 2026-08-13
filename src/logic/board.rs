@@ -2,7 +2,7 @@ use crate::logic::{
     field::Field,
     pawn::{Pawn, PawnState},
     player::Player,
-    utils::{DeltaPosition, Position},
+    utils::{CapturePath, DeltaPosition, Position},
 };
 use std::ops::{Index, IndexMut};
 
@@ -143,6 +143,42 @@ impl Board {
         }
 
         Some(available_moves)
+    }
+
+    fn can_capture(&self, from: Position, to: Position, player: &Player) -> bool {
+        let Some(capturing_pawn) = &self[from].pawn else {
+            return false;
+        };
+
+        if !self.is_player_owner_of_the_pawn(player, capturing_pawn) {
+            return false;
+        }
+
+        let Some(captured_pawn) = &self[to].pawn else {
+            return false;
+        };
+
+        if self.is_player_owner_of_the_pawn(player, captured_pawn) {
+            return false;
+        }
+
+        let delta_distance: DeltaPosition = to - from;
+        let player_direction = player
+            .vertical_direction
+            .expect("Player vertical_direction not set!");
+        delta_distance.row == player_direction.row
+            && delta_distance.column.abs() == 1
+            && to
+                .checked_add(&delta_distance)
+                .is_some_and(|pos| self.is_position_empty(pos))
+    }
+
+    pub fn get_available_captures(
+        &self,
+        pos: Position,
+        player: &Player,
+    ) -> Option<Vec<CapturePath>> {
+        todo!();
     }
 
     pub fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
