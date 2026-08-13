@@ -166,6 +166,7 @@ impl Board {
         let player_direction = player
             .vertical_direction
             .expect("Player vertical_direction not set!");
+
         delta_distance.row == player_direction.row
             && delta_distance.column.abs() == 1
             && to

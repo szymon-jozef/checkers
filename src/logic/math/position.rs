@@ -6,6 +6,13 @@ use log::debug;
 use crate::logic::math::vector::Vector2D;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// Position on the board. Consists of row and column. Should be treated like a point in space on
+/// unsigned grid.
+///
+/// Has:
+/// - checked_add for adding with `Vector2d`
+/// - is_in_range for checking if position fits on the board
+/// - `Position` - `Position` = `Vector2D` operator overloaded
 pub struct Position {
     pub row: usize,
     pub column: usize,
@@ -46,5 +53,43 @@ impl Sub for Position {
             row: self.row as i8 - rhs.row as i8,
             column: self.column as i8 - rhs.column as i8,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::logic::math::{position::Position, vector::Vector2D};
+
+    fn init_logger() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
+    #[test]
+    fn test_adding_positions() {
+        init_logger();
+
+        let pos1: Position = Position { row: 1, column: 1 };
+        let delta_ok: Vector2D = Vector2D { row: 1, column: 1 };
+
+        let result1: Option<Position> = pos1.checked_add(&delta_ok);
+        assert!(result1.is_some());
+        assert_eq!(result1.unwrap(), Position { row: 2, column: 2 });
+
+        let delta_minus_ok: Vector2D = Vector2D {
+            row: -1,
+            column: -1,
+        };
+
+        let result1: Option<Position> = pos1.checked_add(&delta_minus_ok);
+        assert!(result1.is_some());
+        assert_eq!(result1.unwrap(), Position { row: 0, column: 0 });
+
+        let delta_not_ok: Vector2D = Vector2D {
+            row: -10,
+            column: -10,
+        };
+
+        let result3: Option<Position> = pos1.checked_add(&delta_not_ok);
+        assert!(result3.is_none());
     }
 }

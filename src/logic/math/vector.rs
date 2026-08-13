@@ -1,7 +1,11 @@
 use core::fmt;
 use std::ops::{Add, Mul, Sub};
 
-/// Vector for moving `Position`
+/// 2D Vector consisting of row and column of signed types.
+///
+/// Has:
+/// - display trait
+/// - `+` | `-` | `*<usize>` overloaded
 #[derive(Debug, Copy, Clone)]
 pub struct Vector2D {
     pub row: i8,
@@ -36,6 +40,7 @@ impl Sub for Vector2D {
     }
 }
 
+/// Multiplying by a scalar
 impl Mul<usize> for Vector2D {
     type Output = Vector2D;
 
@@ -44,43 +49,5 @@ impl Mul<usize> for Vector2D {
             row: self.row * rhs as i8,
             column: self.column * rhs as i8,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::logic::math::{position::Position, vector::Vector2D};
-
-    fn init_logger() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
-
-    #[test]
-    fn test_adding_positions() {
-        init_logger();
-
-        let pos1: Position = Position { row: 1, column: 1 };
-        let delta_ok: Vector2D = Vector2D { row: 1, column: 1 };
-
-        let result1: Option<Position> = pos1.checked_add(&delta_ok);
-        assert!(result1.is_some());
-        assert_eq!(result1.unwrap(), Position { row: 2, column: 2 });
-
-        let delta_minus_ok: Vector2D = Vector2D {
-            row: -1,
-            column: -1,
-        };
-
-        let result1: Option<Position> = pos1.checked_add(&delta_minus_ok);
-        assert!(result1.is_some());
-        assert_eq!(result1.unwrap(), Position { row: 0, column: 0 });
-
-        let delta_not_ok: Vector2D = Vector2D {
-            row: -10,
-            column: -10,
-        };
-
-        let result3: Option<Position> = pos1.checked_add(&delta_not_ok);
-        assert!(result3.is_none());
     }
 }
