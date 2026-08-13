@@ -5,7 +5,10 @@ use crate::logic::{
     player::Player,
 };
 
-use std::ops::{Index, IndexMut};
+use std::{
+    backtrace::BacktraceStatus::Captured,
+    ops::{Index, IndexMut},
+};
 
 use log::{debug, info, warn};
 
@@ -65,6 +68,35 @@ impl Board {
             .collect();
 
         Board { board, size }
+    }
+
+    /// For testing
+    fn new_empty(player1: &mut Player, player2: &mut Player, size: Option<usize>) -> Self {
+        let size = size.unwrap_or(8);
+
+        player1.end_row = Some(size - 1);
+        player1.vertical_direction = Some(Vector2D { row: 1, column: 0 });
+
+        player2.end_row = Some(0);
+        player2.vertical_direction = Some(Vector2D { row: -1, column: 0 });
+
+        let board: Vec<Field> = (0..size)
+            .flat_map(|row| {
+                (0..size).map(move |column| {
+                    let position: Position = Position { row, column };
+                    Field {
+                        position,
+                        pawn: None,
+                    }
+                })
+            })
+            .collect();
+
+        Board { board, size }
+    }
+
+    fn place_pawn(&mut self, target: Position, owner: &Player) {
+        self[target].pawn = Some(Pawn::new(owner));
     }
 
     /// Checks if move from position to position is valid.
@@ -145,12 +177,19 @@ impl Board {
         Some(available_moves)
     }
 
-    fn can_capture(&self, from: Position, to: Position, player: &Player) -> bool {
-        let Some(capturing_pawn) = &self[from].pawn else {
+    fn can_capture(
+        &self,
+        from: Position,
+        to: Position,
+        player: &Player,
+        already_captured: &Vec<Position>,
+        pawn: &Pawn,
+    ) -> bool {
+        if !self.is_player_owner_of_the_pawn(player, &pawn) {
             return false;
-        };
+        }
 
-        if !self.is_player_owner_of_the_pawn(player, capturing_pawn) {
+        if already_captured.contains(&to) {
             return false;
         }
 
@@ -167,19 +206,113 @@ impl Board {
             .vertical_direction
             .expect("Player vertical_direction not set!");
 
-        delta_distance.row == player_direction.row
+        let direction_condition: bool = if pawn.state == PawnState::Man {
+            delta_distance.row == player_direction.row
+        } else {
+            delta_distance.row.abs() == 1
+        };
+
+        direction_condition
             && delta_distance.column.abs() == 1
             && to
                 .checked_add(&delta_distance)
                 .is_some_and(|pos| self.is_position_empty(pos))
     }
 
-    pub fn get_available_captures(
+    fn find_captures(
         &self,
-        pos: Position,
+        current_pos: Position,
+        current_path: &mut Vec<Position>,
+        captured_enemies: &Vec<Position>,
+        available_directions: &[Vector2D],
         player: &Player,
-    ) -> Option<Vec<CapturePath>> {
-        todo!();
+        all_paths: &mut Vec<CapturePath>,
+        pawn: &Pawn,
+    ) {
+        let mut found_any_capture: bool = false;
+
+        for direction in available_directions {
+            let target_option: Option<Position> = current_pos.checked_add(direction);
+
+            if let Some(target) = target_option
+                && self.can_capture(current_pos, target, player, captured_enemies, &pawn)
+            {
+                if let Some(path_after_capture) = target.checked_add(direction) {
+                    debug!(
+                        "Found possible capture: {} -> {}",
+                        current_pos, path_after_capture
+                    );
+
+                    found_any_capture = true;
+
+                    let mut new_path = current_path.clone();
+                    new_path.push(path_after_capture);
+
+                    let mut new_enemies = captured_enemies.clone();
+                    new_enemies.push(target);
+
+                    self.find_captures(
+                        path_after_capture,
+                        &mut new_path,
+                        &new_enemies,
+                        available_directions,
+                        player,
+                        all_paths,
+                        &pawn,
+                    );
+                }
+            }
+        }
+
+        if !found_any_capture && !current_path.is_empty() {
+            all_paths.push(CapturePath {
+                steps: current_path.to_vec(),
+            });
+        }
+    }
+
+    fn get_available_captures(&self, from: Position, player: &Player) -> Option<Vec<CapturePath>> {
+        let Some(capturing_pawn) = &self[from].pawn else {
+            return None;
+        };
+
+        if !self.is_player_owner_of_the_pawn(player, capturing_pawn) {
+            return None;
+        }
+
+        let mut available_captures: Vec<CapturePath> = vec![];
+        let move_directions: Vec<Vector2D> = if capturing_pawn.state == PawnState::Man {
+            let player_direction: Vector2D = player
+                .vertical_direction
+                .expect("Player direction is not set!");
+
+            vec![
+                Vector2D { row: 0, column: 1 } + player_direction,
+                Vector2D { row: 0, column: -1 } + player_direction,
+            ]
+        } else {
+            vec![
+                Vector2D { row: 1, column: 1 },
+                Vector2D { row: 1, column: -1 },
+                Vector2D { row: -1, column: 1 },
+                Vector2D {
+                    row: -1,
+                    column: -1,
+                },
+            ]
+        };
+
+        self.find_captures(
+            from,
+            &mut vec![],
+            &vec![],
+            &move_directions,
+            player,
+            &mut available_captures,
+            capturing_pawn,
+        );
+
+        Some(available_captures)
     }
 
     pub fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
@@ -436,5 +569,37 @@ mod tests {
             &p1
         ));
         assert!(!test_board.is_movable(Position { row: 0, column: 0 }, &p1));
+    }
+
+    #[test]
+    fn test_getting_captures_path() {
+        init_logger();
+
+        let mut p1 = Player::new("Morbius".to_string());
+        let mut p2 = Player::new("Milo".to_string());
+        //
+        let mut board = Board::new_empty(&mut p1, &mut p2, Some(8));
+
+        let start_pos = Position { row: 2, column: 2 };
+
+        board.place_pawn(start_pos, &p1);
+
+        board.place_pawn(Position { row: 3, column: 3 }, &p2);
+        board.place_pawn(Position { row: 5, column: 3 }, &p2);
+
+        let captures_result = board.get_available_captures(start_pos, &p1);
+
+        assert!(captures_result.is_some(),);
+
+        let paths = captures_result.unwrap();
+
+        assert_eq!(paths.len(), 1,);
+
+        let expected_path = vec![
+            Position { row: 4, column: 4 },
+            Position { row: 6, column: 2 },
+        ];
+
+        assert_eq!(paths[0].steps, expected_path,);
     }
 }
