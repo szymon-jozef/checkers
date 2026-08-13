@@ -121,7 +121,7 @@ impl Board {
         pos.is_in_range(self.size) && self[pos].pawn.is_none()
     }
 
-    fn is_movable(&self, pos: Position, player: &Player) -> bool {
+    fn is_pawn_movable(&self, pos: Position, player: &Player) -> bool {
         self.get_available_moves(pos, player)
             .is_some_and(|moves| !moves.is_empty())
     }
@@ -221,6 +221,7 @@ impl Board {
 
     fn find_captures(
         &self,
+        start_pos: Position,
         current_pos: Position,
         current_path: &mut Vec<Position>,
         captured_enemies: &Vec<Position>,
@@ -252,6 +253,7 @@ impl Board {
                     new_enemies.push(target);
 
                     self.find_captures(
+                        start_pos,
                         path_after_capture,
                         &mut new_path,
                         &new_enemies,
@@ -264,14 +266,20 @@ impl Board {
             }
         }
 
-        if !found_any_capture && !current_path.is_empty() {
+        if !found_any_capture && !current_path.is_empty() && !captured_enemies.is_empty() {
             all_paths.push(CapturePath {
+                from: start_pos,
                 steps: current_path.to_vec(),
+                captured_enemies: captured_enemies.to_vec(),
             });
         }
     }
 
-    fn get_available_captures(&self, from: Position, player: &Player) -> Option<Vec<CapturePath>> {
+    pub fn get_available_captures(
+        &self,
+        from: Position,
+        player: &Player,
+    ) -> Option<Vec<CapturePath>> {
         let Some(capturing_pawn) = &self[from].pawn else {
             return None;
         };
@@ -304,6 +312,7 @@ impl Board {
 
         self.find_captures(
             from,
+            from,
             &mut vec![],
             &vec![],
             &move_directions,
@@ -313,6 +322,20 @@ impl Board {
         );
 
         Some(available_captures)
+    }
+
+    pub fn capture(&mut self, path: &CapturePath, capturing_player: &Player) {
+        /*
+        debug!("Capturing: {}", path);
+        */
+
+        let mut from = path.from;
+
+        for (next_pos, enemy_path) in path.iter() {
+            self[*enemy_path].pawn.take();
+            self.move_pawn_anywhere(capturing_player, from, *next_pos);
+            from = *next_pos;
+        }
     }
 
     pub fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
@@ -352,13 +375,55 @@ impl Board {
         };
 
         // we can safely unwrap, because if there's not pawn function returns false earlier
-        let mut mowing_pawn: Pawn = self[from].pawn.take().unwrap();
+        let mut moving_pawn: Pawn = self[from].pawn.take().unwrap();
 
         if to.row == end_row {
-            mowing_pawn.state = super::pawn::PawnState::Dame;
+            moving_pawn.state = super::pawn::PawnState::Dame;
         }
 
-        self[to.row][to.column].pawn = Some(mowing_pawn);
+        self[to.row][to.column].pawn = Some(moving_pawn);
+
+        true
+    }
+
+    fn move_pawn_anywhere(&mut self, player: &Player, from: Position, to: Position) -> bool {
+        let Some(pawn) = &self[from].pawn else {
+            warn!(
+                "Tried moving pawn from: {}, but there is no pawn there!",
+                from
+            );
+            return false;
+        };
+
+        if self[to].pawn.is_some() {
+            warn!(
+                "Tried moving pawn from {} to {}, but there was a pawn at the destination!",
+                from, to
+            );
+            return false;
+        }
+
+        if !self.is_player_owner_of_the_pawn(player, &pawn) {
+            warn!("Player {} tried moving a pawn which he doesn own!", player);
+            return false;
+        }
+
+        let Some(end_row) = player.end_row else {
+            warn!(
+                "Tried moving pawn of player {}, who wasn't initialized by the board!",
+                player.id
+            );
+            return false;
+        };
+
+        let mut moving_pawn: Pawn = self[from].pawn.take().unwrap();
+
+        if to.row == end_row {
+            moving_pawn.state = super::pawn::PawnState::Dame;
+        }
+
+        debug!("Placing pawn from {} to {}", from, to);
+        self[to].pawn = Some(moving_pawn);
 
         true
     }
@@ -560,15 +625,15 @@ mod tests {
         let mut p2: Player = Player::new("Milo".to_string());
         let test_board: Board = Board::new(&mut p1, &mut p2, None);
 
-        assert!(test_board.is_movable(Position { row: 2, column: 1 }, &p1));
-        assert!(!test_board.is_movable(
+        assert!(test_board.is_pawn_movable(Position { row: 2, column: 1 }, &p1));
+        assert!(!test_board.is_pawn_movable(
             Position {
                 row: 10,
                 column: 12
             },
             &p1
         ));
-        assert!(!test_board.is_movable(Position { row: 0, column: 0 }, &p1));
+        assert!(!test_board.is_pawn_movable(Position { row: 0, column: 0 }, &p1));
     }
 
     #[test]
@@ -577,8 +642,8 @@ mod tests {
 
         let mut p1 = Player::new("Morbius".to_string());
         let mut p2 = Player::new("Milo".to_string());
-        //
-        let mut board = Board::new_empty(&mut p1, &mut p2, Some(8));
+
+        let mut board = Board::new_empty(&mut p1, &mut p2, None);
 
         let start_pos = Position { row: 2, column: 2 };
 
@@ -601,5 +666,36 @@ mod tests {
         ];
 
         assert_eq!(paths[0].steps, expected_path,);
+    }
+
+    #[test]
+    fn test_capturing() {
+        init_logger();
+
+        let mut p1 = Player::new("Morbius".to_string());
+        let mut p2 = Player::new("Milo".to_string());
+
+        let mut board = Board::new_empty(&mut p1, &mut p2, None);
+
+        let start_pos = Position { row: 2, column: 2 };
+
+        board.place_pawn(start_pos, &p1);
+
+        board.place_pawn(Position { row: 3, column: 3 }, &p2);
+        board.place_pawn(Position { row: 5, column: 3 }, &p2);
+
+        let captures_result = board.get_available_captures(start_pos, &p1);
+        let path = &captures_result.unwrap()[0];
+
+        board.capture(path, &p1);
+
+        assert!(
+            board[6][2]
+                .pawn
+                .as_ref()
+                .is_some_and(|pawn| pawn.owner == p1.id)
+        );
+        assert!(board[3][3].pawn.is_none());
+        assert!(board[5][3].pawn.is_none());
     }
 }
