@@ -38,3 +38,9 @@ impl CapturePath {
         self.steps.iter().zip(self.captured_enemies.iter())
     }
 }
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct MovePath {
+    pub from: Position,
+    pub available_steps: Vec<Position>,
+}

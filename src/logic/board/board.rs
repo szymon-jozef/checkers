@@ -1,7 +1,7 @@
 use crate::logic::{
     board::{
         field::Field,
-        pawn::{CapturePath, Pawn, PawnState},
+        pawn::{CapturePath, MovePath, Pawn, PawnState},
     },
     math::{position::Position, vector::Vector2D},
     player::Player,
@@ -9,7 +9,7 @@ use crate::logic::{
 
 use std::ops::{Index, IndexMut};
 
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 
 pub struct Board {
     board: Vec<Field>,
@@ -125,12 +125,12 @@ impl Board {
             .is_some_and(|moves| !moves.is_empty())
     }
 
-    fn get_available_moves(&self, pos: Position, player: &Player) -> Option<Vec<Position>> {
-        let mut available_moves: Vec<Position> = vec![];
+    pub fn get_available_moves(&self, pos: Position, player: &Player) -> Option<Vec<MovePath>> {
+        let mut available_moves: Vec<MovePath> = vec![];
         let mut possible_directions: Vec<Vector2D> = vec![];
 
         if !pos.is_in_range(self.size) {
-            debug!(
+            warn!(
                 "get_possible_moves got a value: {} that was out of range!",
                 pos
             );
@@ -142,7 +142,7 @@ impl Board {
         };
 
         let Some(direction) = player.vertical_direction else {
-            debug!("Player: {} doesn't have a direction set!", player.id);
+            error!("Player: {} doesn't have a direction set!", player.id);
             return None;
         };
 
@@ -160,16 +160,29 @@ impl Board {
         }
 
         for direction in &possible_directions {
+            debug!("Checking direction {} for available moves", direction);
+
+            let mut path: Vec<Position> = vec![];
             for multiplier in 1..=max_multiplier {
                 if let Some(new_pos) = pos.checked_add(&(*direction * multiplier)) {
                     if self.is_position_empty(new_pos) {
-                        available_moves.push(new_pos);
+                        debug!("Found available move at: {}", new_pos);
+                        path.push(new_pos);
                     } else {
+                        debug!("Position: {} wasn't empty!", new_pos);
                         break;
                     }
                 } else {
+                    debug!("Found position was out of bounds!");
                     break;
                 }
+            }
+
+            if !path.is_empty() {
+                available_moves.push(MovePath {
+                    from: pos,
+                    available_steps: path,
+                })
             }
         }
 
@@ -582,6 +595,40 @@ mod tests {
         assert!(test_board[3][0].pawn.is_some());
         assert_eq!(test_board[3][0].pawn.as_ref().unwrap().owner, player1.id);
         assert!(test_board[2][1].pawn.is_none());
+    }
+
+    #[test]
+    fn test_getting_pawn_moves() {
+        init_logger();
+
+        let mut p1: Player = Player::new("Morbius".to_string());
+        let mut p2: Player = Player::new("Milo".to_string());
+
+        let mut board: Board = Board::new_empty(&mut p1, &mut p2, None);
+
+        board.place_pawn(Position { row: 0, column: 0 }, &p1);
+        board[0][0].pawn.as_mut().unwrap().state = PawnState::Dame;
+
+        let result: Vec<MovePath> = board
+            .get_available_moves(Position { row: 0, column: 0 }, &p1)
+            .unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result[0],
+            MovePath {
+                from: Position { row: 0, column: 0 },
+                available_steps: vec![
+                    Position { row: 1, column: 1 },
+                    Position { row: 2, column: 2 },
+                    Position { row: 3, column: 3 },
+                    Position { row: 4, column: 4 },
+                    Position { row: 5, column: 5 },
+                    Position { row: 6, column: 6 },
+                    Position { row: 7, column: 7 },
+                ]
+            }
+        );
     }
 
     #[test]

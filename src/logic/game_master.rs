@@ -1,5 +1,9 @@
 use crate::logic::{
-    board::{board::Board, pawn::CapturePath},
+    board::{
+        board::Board,
+        pawn::{CapturePath, MovePath},
+    },
+    math::position::Position,
     player::Player,
 };
 
@@ -49,6 +53,18 @@ impl GameMaster {
             .filter_map(|pos| {
                 self.board
                     .get_available_captures(pos, self.players.get_current_turn())
+            })
+            .flatten()
+            .collect()
+    }
+
+    pub fn get_current_player_moves(&self) -> Vec<MovePath> {
+        self.board
+            .get_player_pawns_positions(self.players.get_current_turn())
+            .into_iter()
+            .filter_map(|pos| {
+                self.board
+                    .get_available_moves(pos, self.players.get_current_turn())
             })
             .flatten()
             .collect()
