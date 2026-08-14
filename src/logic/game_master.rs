@@ -160,10 +160,8 @@ mod tests {
     use log::info;
     use rand::seq::IndexedMutRandom;
     use rand::seq::IndexedRandom;
-    use rand::seq::SliceRandom;
 
-    #[test]
-    fn test_game_flow() {
+    fn run_game() {
         let mut master: GameMaster = GameMaster::new("Morbius".to_string(), "Milo".to_string());
         let mut turns = 0;
         let max_turns = 2000;
@@ -200,9 +198,23 @@ mod tests {
 
                 master.move_pawn(from, *to);
                 turns += 1;
+                continue;
             }
+
+            panic!("Test should never come to this place!");
         }
 
         assert!(turns < max_turns);
+    }
+
+    #[test]
+    fn test_game_flow() {
+        // random amount i pulled straight out of my ass
+        let game_amount = 100;
+
+        for game_number in 0..game_amount {
+            info!("Running game number: {}", game_number);
+            run_game();
+        }
     }
 }

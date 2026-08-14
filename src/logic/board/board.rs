@@ -348,7 +348,11 @@ impl Board {
             capturing_pawn,
         );
 
-        Some(available_captures)
+        if available_captures.is_empty() {
+            None
+        } else {
+            Some(available_captures)
+        }
     }
 
     pub fn capture(&mut self, path: &CapturePath, capturing_player: &Player) -> bool {
