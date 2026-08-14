@@ -1,7 +1,7 @@
 use core::fmt;
 use std::ops::Sub;
 
-use log::debug;
+use log::{debug, trace};
 
 use crate::logic::math::vector::Vector2D;
 
@@ -28,8 +28,8 @@ impl Position {
     pub fn checked_add(&self, delta: &Vector2D) -> Option<Position> {
         let new_row = self.row.checked_add_signed(delta.row as isize)?;
         let new_column = self.column.checked_add_signed(delta.column as isize)?;
-        debug!("Adding row: {} + {} = {}", self.row, delta.row, new_row);
-        debug!(
+        trace!("Adding row: {} + {} = {}", self.row, delta.row, new_row);
+        trace!(
             "Adding column: {} + {} = {}",
             self.column, delta.column, new_column
         );

@@ -1,4 +1,4 @@
-use log::warn;
+use log::{info, warn};
 
 use crate::logic::{
     board::{
@@ -99,10 +99,13 @@ impl GameMaster {
         let passive_lost: bool = self.is_player_lost(passive);
 
         if active_lost && passive_lost {
+            info!("Game ended at a draw!");
             Some(GameResult::Draw)
         } else if active_lost {
+            info!("Player: {} won", passive.id);
             Some(GameResult::Lost(active.id))
         } else if passive_lost {
+            info!("Player: {} won", active.id);
             Some(GameResult::Lost(passive.id))
         } else {
             None

@@ -9,7 +9,7 @@ use crate::logic::{
 
 use std::ops::{Index, IndexMut};
 
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 
 pub struct Board {
     board: Vec<Field>,
@@ -71,6 +71,7 @@ impl Board {
 
     /// For testing
     fn new_empty(player1: &mut Player, player2: &mut Player, size: Option<usize>) -> Self {
+        debug!("Creating new empty board!");
         let size = size.unwrap_or(8);
 
         player1.end_row = Some(size - 1);
@@ -95,6 +96,7 @@ impl Board {
     }
 
     fn place_pawn(&mut self, target: Position, owner: &Player) {
+        debug!("Placing new pawn by hand!");
         self[target].pawn = Some(Pawn::new(owner));
     }
 
@@ -126,6 +128,7 @@ impl Board {
     }
 
     pub fn get_available_moves(&self, pos: Position, player: &Player) -> Option<Vec<MovePath>> {
+        debug!("=== Checking available moves for pawn on: {} ===", pos);
         let mut available_moves: Vec<MovePath> = vec![];
         let mut possible_directions: Vec<Vector2D> = vec![];
 
@@ -201,7 +204,10 @@ impl Board {
         already_captured: &Vec<Position>,
         pawn: &Pawn,
     ) -> bool {
-        debug!("=== Checkinf if pawn can capture from: {} to {}", from, to);
+        debug!(
+            "=== Checking if pawn can capture from: {} to {} ===",
+            from, to
+        );
 
         if !self.is_player_owner_of_the_pawn(player, &pawn) {
             debug!("Player wasn't owner of the pawn...");
@@ -257,6 +263,7 @@ impl Board {
         all_paths: &mut Vec<CapturePath>,
         pawn: &Pawn,
     ) {
+        trace!("Searching for captures on: {}...", current_pos);
         let mut found_any_capture: bool = false;
 
         for direction in available_directions {
@@ -307,6 +314,7 @@ impl Board {
         from: Position,
         player: &Player,
     ) -> Option<Vec<CapturePath>> {
+        debug!("=== Searching for available captures from: {} === ", from);
         let Some(capturing_pawn) = &self[from].pawn else {
             return None;
         };
@@ -356,10 +364,11 @@ impl Board {
     }
 
     pub fn capture(&mut self, path: &CapturePath, capturing_player: &Player) -> bool {
-        /*
-        debug!("Capturing: {}", path);
-        */
-
+        debug!(
+            "Capturing from: {} to: {}!",
+            path.from,
+            path.steps.last().unwrap()
+        );
         // TODO! Maybe return false ??
 
         let mut from = path.from;
@@ -390,6 +399,8 @@ impl Board {
 
     /// Returns true if move was successful
     pub fn move_pawn(&mut self, player: &Player, from: Position, to: Position) -> bool {
+        debug!("Moving pawn from: {} to {}", from, to);
+
         if !self.is_move_valid(&from, &to) {
             warn!("Tried invalid move: {} -> {}", from, to);
             return false;
@@ -422,6 +433,10 @@ impl Board {
     }
 
     fn move_pawn_anywhere(&mut self, player: &Player, from: Position, to: Position) -> bool {
+        debug!(
+            "Attempting to move pawn from: {} to: {}. This is a anywhere_move!",
+            from, to
+        );
         let Some(pawn) = &self[from].pawn else {
             warn!(
                 "Tried moving pawn from: {}, but there is no pawn there!",
