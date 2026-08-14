@@ -1,4 +1,7 @@
-use crate::logic::{board::board::Board, player::Player};
+use crate::logic::{
+    board::{board::Board, pawn::CapturePath},
+    player::Player,
+};
 
 struct PlayerList {
     pub players: [Player; 2],
@@ -37,5 +40,17 @@ impl GameMaster {
         let board = Board::new(player1, player2, None);
 
         GameMaster { players, board }
+    }
+
+    pub fn get_current_player_captures(&self) -> Vec<CapturePath> {
+        self.board
+            .get_player_pawns_positions(self.players.get_current_turn())
+            .into_iter()
+            .filter_map(|pos| {
+                self.board
+                    .get_available_captures(pos, self.players.get_current_turn())
+            })
+            .flatten()
+            .collect()
     }
 }

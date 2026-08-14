@@ -1,5 +1,3 @@
-use core::fmt;
-
 use uuid::Uuid;
 
 use crate::logic::{math::position::Position, player::Player};
