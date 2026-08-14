@@ -1,8 +1,11 @@
+use log::warn;
+
 use crate::logic::{
     board::{
         board::Board,
         pawn::{CapturePath, MovePath},
     },
+    math::position::Position,
     player::Player,
 };
 
@@ -82,9 +85,10 @@ impl GameMaster {
         let player_pawns = self.board.get_player_pawns_positions(player);
 
         player_pawns.len() == 0
-            || player_pawns
-                .iter()
-                .all(|pos| self.board.get_available_moves(*pos, player).is_none())
+            || player_pawns.iter().all(|pos| {
+                self.board.get_available_moves(*pos, player).is_none()
+                    && self.board.get_available_captures(*pos, player).is_none()
+            })
     }
 
     pub fn get_game_result(&self) -> Option<GameResult> {
@@ -103,5 +107,102 @@ impl GameMaster {
         } else {
             None
         }
+    }
+
+    pub fn move_pawn(&mut self, from: Position, to: Position) -> bool {
+        if self.get_current_player_moves().is_empty() {
+            warn!(
+                "Player: {} tried moving, but they don't have any moves available!",
+                self.players.get_current_turn().id
+            );
+            return false;
+        }
+
+        if !self.get_current_player_captures().is_empty() {
+            warn!(
+                "Player: {} tried moving, but he has captures available!",
+                self.players.get_current_turn().id
+            );
+            return false;
+        }
+
+        if self
+            .board
+            .move_pawn(self.players.get_current_turn(), from, to)
+        {
+            self.players.change_turn();
+            return true;
+        }
+        false
+    }
+
+    pub fn capture(&mut self, path: &CapturePath) -> bool {
+        if self.get_current_player_captures().is_empty() {
+            warn!(
+                "Player: {} tried capturing, but he doesn't have any captures available!",
+                self.players.get_current_turn().id
+            );
+            return false;
+        }
+
+        if self.board.capture(path, self.players.get_current_turn()) {
+            self.players.change_turn();
+            return true;
+        }
+
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use log::info;
+    use rand::seq::IndexedMutRandom;
+    use rand::seq::IndexedRandom;
+    use rand::seq::SliceRandom;
+
+    #[test]
+    fn test_game_flow() {
+        let mut master: GameMaster = GameMaster::new("Morbius".to_string(), "Milo".to_string());
+        let mut turns = 0;
+        let max_turns = 2000;
+
+        while turns < max_turns {
+            if let Some(result) = master.get_game_result() {
+                match result {
+                    GameResult::Lost(loser_id) => {
+                        info!("Player: {} lost! Ending the loop", loser_id);
+                    }
+                    GameResult::Draw => {
+                        info!("Game ended in a draw! Ending the loop");
+                    }
+                }
+                break;
+            }
+
+            let mut rng = rand::rng();
+
+            let available_captures = master.get_current_player_captures();
+
+            if !available_captures.is_empty() {
+                let capture = available_captures.choose(&mut rng).unwrap();
+                master.capture(capture);
+                turns += 1;
+                continue;
+            }
+
+            let mut available_moves = master.get_current_player_moves();
+            if !available_moves.is_empty() {
+                let path = available_moves.choose_mut(&mut rng).unwrap();
+                let from = path.from;
+                let to = path.available_steps.choose_mut(&mut rng).unwrap();
+
+                master.move_pawn(from, *to);
+                turns += 1;
+            }
+        }
+
+        assert!(turns < max_turns);
     }
 }

@@ -186,7 +186,11 @@ impl Board {
             }
         }
 
-        Some(available_moves)
+        if available_moves.is_empty() {
+            None
+        } else {
+            Some(available_moves)
+        }
     }
 
     fn can_capture(
@@ -197,19 +201,30 @@ impl Board {
         already_captured: &Vec<Position>,
         pawn: &Pawn,
     ) -> bool {
+        debug!("=== Checkinf if pawn can capture from: {} to {}", from, to);
+
         if !self.is_player_owner_of_the_pawn(player, &pawn) {
+            debug!("Player wasn't owner of the pawn...");
+            return false;
+        }
+
+        if !to.is_in_range(self.size) {
+            debug!("Position was out of range...");
             return false;
         }
 
         if already_captured.contains(&to) {
+            debug!("Pawn was already captured...");
             return false;
         }
 
         let Some(captured_pawn) = &self[to].pawn else {
+            debug!("There was no pawn there...");
             return false;
         };
 
         if self.is_player_owner_of_the_pawn(player, captured_pawn) {
+            debug!("Player tried capturing his own pawn! Idiot");
             return false;
         }
 
@@ -336,10 +351,12 @@ impl Board {
         Some(available_captures)
     }
 
-    pub fn capture(&mut self, path: &CapturePath, capturing_player: &Player) {
+    pub fn capture(&mut self, path: &CapturePath, capturing_player: &Player) -> bool {
         /*
         debug!("Capturing: {}", path);
         */
+
+        // TODO! Maybe return false ??
 
         let mut from = path.from;
 
@@ -348,6 +365,8 @@ impl Board {
             self.move_pawn_anywhere(capturing_player, from, *next_pos);
             from = *next_pos;
         }
+
+        true
     }
 
     pub fn get_player_pawns_positions(&self, player: &Player) -> Vec<Position> {
