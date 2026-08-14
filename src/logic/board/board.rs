@@ -11,6 +11,9 @@ use std::ops::{Index, IndexMut};
 
 use log::{debug, error, info, trace, warn};
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
 pub struct Board {
     board: Vec<Field>,
     pub size: usize,

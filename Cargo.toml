@@ -13,9 +13,8 @@ edition = "2024"
 env_logger = "0.11.11"
 log = "0.4.33"
 rand = "0.10.2"
+serde = { version = "1.0.229", features = ["derive"] }
 
 [dependencies.uuid]
 version = "1.24.0"
-features = [
-    "v4",
-]
+features = ["serde", "v4"]

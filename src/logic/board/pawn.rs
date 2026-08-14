@@ -1,8 +1,9 @@
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::logic::{math::position::Position, player::Player};
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum PawnState {
     Man,
     Dame,
@@ -10,7 +11,7 @@ pub enum PawnState {
 }
 
 /// Basic pawn
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Pawn {
     pub state: PawnState,
     pub owner: Uuid,
