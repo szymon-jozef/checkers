@@ -4,6 +4,7 @@ use std::net::SocketAddr;
 
 use log::{debug, error, warn};
 use postcard::from_bytes;
+use tokio::net::TcpSocket;
 use tokio::{net::TcpStream, sync::mpsc::Sender};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -45,6 +46,7 @@ where
         }
     }
 
+    /// Meant for clients
     pub async fn connect_to_server(&mut self, url: SocketAddr) -> bool {
         match self.conn_type {
             ConnectionType::Server => {
@@ -62,6 +64,18 @@ where
                 self.tcp.is_some()
             }
             ConnectionType::Client => false, // only client can connect to the server
+        }
+    }
+
+    /// Meant for server
+    pub fn delegate(&mut self, tcp: TcpStream, client_addr: SocketAddr) -> bool {
+        match self.conn_type {
+            ConnectionType::Server => false, // only server can delegate
+            ConnectionType::Client => {
+                self.peer = Some(client_addr);
+                self.tcp = Some(tcp);
+                true
+            }
         }
     }
 
