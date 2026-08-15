@@ -1,3 +1,4 @@
+use std::io;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 
@@ -63,30 +64,34 @@ where
         todo!();
     }
 
-    pub async fn start_listening(&self) {
-        todo!()
+    pub async fn start_listening(&mut self) {
+        loop {
+            let result = self.read_header().await;
+
+            if let Err(e) = result {
+                error!(
+                    "Error while reading data from connection with: {} {}. Connection is broken. Disconnecting...",
+                    self.tcp.as_ref().unwrap().peer_addr().unwrap(),
+                    e
+                );
+                return;
+            }
+        }
     }
 
-    async fn read_header(&mut self) {
+    async fn read_header(&mut self) -> Result<(), io::Error> {
         let mut buff = [0u8; 4];
-        let Some(tcp) = &mut self.tcp else {
-            error!("Tried reading header, but tcp connection is not established!");
-            return;
-        };
 
-        let result = tcp.read_exact(&mut buff).await;
+        let tcp = self.tcp.as_mut().ok_or(io::ErrorKind::NotConnected)?;
 
-        if let Err(e) = result {
-            error!("Error while reading header: {}", e);
-            return;
-        }
+        tcp.read_exact(&mut buff).await?;
 
         let size_to_read: u32 = u32::from_be_bytes(buff);
 
-        self.read_content(size_to_read).await;
+        self.read_content(size_to_read).await
     }
 
-    async fn read_content(&mut self, size_to_read: u32) {
+    async fn read_content(&mut self, size_to_read: u32) -> Result<(), io::Error> {
         let mut buff: Vec<u8> = vec![0; size_to_read as usize];
 
         let Some(tcp) = &mut self.tcp else {
@@ -96,20 +101,8 @@ where
             panic!();
         };
 
-        let bytes_read = tcp.read_exact(&mut buff).await;
-
-        match bytes_read {
-            Ok(bytes_size) => {
-                debug!("Read {} bytes during read_content", bytes_size);
-            }
-            Err(e) => {
-                error!(
-                    "Error while recieving bytes from network during read_content: {}",
-                    e
-                );
-                return;
-            }
-        }
+        let bytes_read = tcp.read_exact(&mut buff).await?;
+        debug!("Read {} bytes during read_content", bytes_read);
 
         let msg_result: Result<Inbound, postcard::Error> = MessageLike::from_bits(&buff);
 
@@ -122,19 +115,20 @@ where
                         if let Err(e) = self.sender.send(msg).await {
                             error!("Erro while sending message to main thread: {}", e);
                         }
+                        return Ok(());
                     }
                     Err(e) => {
                         error!(
                             "Error while preparing message in read_content for sender: {}",
                             e
                         );
-                        return;
+                        return Ok(());
                     }
                 }
             }
             Err(e) => {
                 error!("Error while getting the message from bits: {}", e);
-                return;
+                return Ok(());
             }
         }
     }
