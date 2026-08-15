@@ -6,7 +6,7 @@ use log::{debug, error, warn};
 use postcard::from_bytes;
 use tokio::{net::TcpStream, sync::mpsc::Sender};
 
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::network::message::{Message, MessageLike};
 
@@ -23,6 +23,7 @@ where
     conn_type: ConnectionType,
     sender: Sender<Message<Inbound>>,
     tcp: Option<TcpStream>,
+    peer: Option<SocketAddr>,
     outbound_type: PhantomData<Outbound>,
 }
 
@@ -39,6 +40,7 @@ where
             conn_type,
             sender,
             tcp: None,
+            peer: None,
             outbound_type: PhantomData,
         }
     }
@@ -47,7 +49,10 @@ where
         match self.conn_type {
             ConnectionType::Server => {
                 self.tcp = match TcpStream::connect(url).await {
-                    Ok(conn) => Some(conn),
+                    Ok(conn) => {
+                        self.peer = Some(url);
+                        Some(conn)
+                    }
                     Err(e) => {
                         error!("Error while connecting to the server: {}", e);
                         None
@@ -61,7 +66,28 @@ where
     }
 
     pub async fn send(&mut self, msg: Message<Outbound>) {
-        todo!();
+        let size = msg.size;
+        let content = msg.content;
+
+        let Some(tcp) = &mut self.tcp else {
+            error!("Tcp connection is not established! Cannot send");
+            return;
+        };
+
+        if let Err(e) = tcp.write_all(&size.to_be_bytes()).await {
+            error!("Error while sending header to: {:?}\n{}", self.peer, e);
+            return;
+        }
+
+        let Ok(msg) = content.to_bits() else {
+            error!("Cannot change message into bytes while sending!");
+            return;
+        };
+
+        if let Err(e) = tcp.write_all(&msg).await {
+            error!("Error while sending content to: {:?}\n{}", self.peer, e);
+            return;
+        };
     }
 
     pub async fn start_listening(&mut self) {
@@ -70,9 +96,8 @@ where
 
             if let Err(e) = result {
                 error!(
-                    "Error while reading data from connection with: {} {}. Connection is broken. Disconnecting...",
-                    self.tcp.as_ref().unwrap().peer_addr().unwrap(),
-                    e
+                    "Error while reading data from connection with: {:?} {}. Connection is broken. Disconnecting...",
+                    self.peer, e
                 );
                 return;
             }
