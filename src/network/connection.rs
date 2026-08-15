@@ -2,9 +2,7 @@ use std::io;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 
-use log::{debug, error, warn};
-use postcard::from_bytes;
-use tokio::net::TcpSocket;
+use log::{debug, error};
 use tokio::{net::TcpStream, sync::mpsc::Sender};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -12,11 +10,13 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::network::message::{Message, MessageLike};
 
 /// Enum defines __TO WHAT__ connection is connecting
+#[derive(Debug)]
 pub enum ConnectionType {
     Server,
     Client,
 }
 
+#[derive(Debug)]
 pub struct Connection<Inbound, Outbound>
 where
     Inbound: MessageLike,
