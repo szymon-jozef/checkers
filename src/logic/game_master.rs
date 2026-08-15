@@ -1,4 +1,5 @@
 use log::{info, warn};
+use serde::{Deserialize, Serialize};
 
 use crate::logic::{
     board::{
@@ -9,6 +10,7 @@ use crate::logic::{
     player::Player,
 };
 
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub enum GameResult {
     Lost(uuid::Uuid),
     Draw,
