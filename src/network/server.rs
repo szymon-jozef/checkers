@@ -1,4 +1,4 @@
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::{
     collections::HashMap,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -9,7 +9,7 @@ use tokio::{
 };
 
 use crate::{
-    logic::game_master::GameMaster,
+    logic::{board::pawn::CapturePath, game_master::GameMaster, math::position::Position},
     network::{
         connection::{Connection, ConnectionType},
         message::{
@@ -195,12 +195,12 @@ impl Server {
                                     }
                                 },
 
-                                ClientMessage::RequestCapture { capture_path: _ } => {
-                                    self.process_capture();
+                                ClientMessage::RequestCapture { capture_path } => {
+                                    self.process_capture(capture_path);
                                 }
 
-                                ClientMessage::RequestMove { from: _, to: _ } => {
-                                    self.process_move();
+                                ClientMessage::RequestMove { from, to } => {
+                                    self.process_move(from, to);
                                 }
 
                                 ClientMessage::TextMessage (content) => {
@@ -223,12 +223,24 @@ impl Server {
         // TODO! Do something with this name i guess
     }
 
-    fn process_capture(&self) {
-        todo!();
+    fn process_capture(&mut self, capture_path: CapturePath) {
+        if let Some(gm) = self.game_master.as_mut() {
+            if gm.capture(&capture_path) {
+                debug!("Capture valid!");
+            } else {
+                debug!("Invalid capture!");
+            }
+        }
     }
 
-    fn process_move(&self) {
-        todo!();
+    fn process_move(&mut self, from: Position, to: Position) {
+        if let Some(gm) = self.game_master.as_mut() {
+            if gm.move_pawn(from, to) {
+                debug!("Move was valid!");
+            } else {
+                debug!("Move was invalid!");
+            }
+        }
     }
 
     async fn request_handshake(&mut self, addr: SocketAddr) {
