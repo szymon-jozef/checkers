@@ -248,9 +248,13 @@ impl Server {
             .values()
             .any(|v| v.identity.name == player_name)
         {
-            fixed_name = format!("{}(2)", player_name)
+            fixed_name = format!("{}(2)", player_name);
+            warn!(
+                "Player has the same name as the other player so changing it to {}",
+                fixed_name
+            );
         } else {
-            fixed_name = player_name
+            fixed_name = player_name;
         }
 
         let Some(identity) = self.connections.get_mut(&addr) else {
