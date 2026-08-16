@@ -137,8 +137,19 @@ impl Server {
                             self.connections.insert(addr, sender);
                             self.request_handshake(addr).await;
                         } else {
-                            let msg = Message::new(ServerMessage::DeclineHandshake { reason: "There is currently game going and it doesn't allow spectators".to_string() });
-                            self.send_message(addr, msg).await;
+                            let reason = "There is currently game going and it doesn't allow spectators".to_string();
+                            info!("Rejecting {}, because {}", addr, reason);
+
+                            let msg = Message::new(ServerMessage::DeclineHandshake { reason: reason });
+
+
+                            if let Ok(msg) = msg {
+                            let _ = sender.send(msg).await; // we can't use send_message because we
+                                                            // don't add addr to connections
+                            } else {
+                                warn!("Could not send reason of rejection. Server is acting like my ex...");
+                                return;
+                            }
                         }
                     } else {
                         warn!("Welcoming reciever closed!");
