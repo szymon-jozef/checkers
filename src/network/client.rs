@@ -5,16 +5,20 @@ use tokio::sync::mpsc::{self, Receiver, Sender};
 
 use crate::network::{
     connection::{Connection, ConnectionType},
-    message::{ClientMessage, Message, ServerMessage},
+    message::{
+        ClientMessage::{self, TextMessage},
+        Message, ServerMessage,
+    },
 };
 
+#[derive(Clone)]
 pub struct ClientSettings {
     server_url: SocketAddr,
     name: String,
 }
 
 pub struct Client {
-    conn_reciever_incoming: Receiver<(SocketAddr, Message<ServerMessage>)>,
+    conn_reciever_incoming: Option<Receiver<(SocketAddr, Message<ServerMessage>)>>,
     conn_sender_outgoing: Sender<Message<ClientMessage>>,
     settings: ClientSettings,
 }
@@ -41,37 +45,53 @@ impl Client {
         });
 
         Client {
-            conn_reciever_incoming: conn_reciever,
+            conn_reciever_incoming: Some(conn_reciever),
             conn_sender_outgoing,
             settings,
         }
     }
 
-    pub async fn update(&mut self) {
-        loop {
-            if let Some(oldest_msg) = self.conn_reciever_incoming.recv().await {
-                let (addr, msg) = oldest_msg;
-                info!("Got message from: {:?}", addr);
+    pub fn update(&mut self) {
+        let Some(mut conn_reciever_incoming) = self.conn_reciever_incoming.take() else {
+            error!("Tried updating, but there's no conn_reciever of incoming messages!");
+            return;
+        };
 
-                match msg.content {
-                    ServerMessage::RequestHandshake => {
-                        info!("Server requested handshake!");
-                        let msg = Message::new(ClientMessage::AnswerHandshake {
-                            player_name: self.settings.name.clone(),
-                        });
+        let sender = self.conn_sender_outgoing.clone();
 
-                        self.send_message(msg).await;
+        let settings = self.settings.clone();
+
+        tokio::spawn(async move {
+            loop {
+                if let Some(oldest_msg) = conn_reciever_incoming.recv().await {
+                    let (addr, msg) = oldest_msg;
+                    info!("Got message from: {:?}", addr);
+
+                    match msg.content {
+                        ServerMessage::RequestHandshake => {
+                            info!("Server requested handshake!");
+                            let msg = Message::new(ClientMessage::AnswerHandshake {
+                                player_name: settings.name.clone(),
+                            });
+
+                            let _ = sender.send(msg.unwrap()).await;
+                        }
+                        ServerMessage::AcceptHandshake { player_id } => todo!(),
+                        ServerMessage::DeclineHandshake { reason } => todo!(),
+                        ServerMessage::AvailableCaptures { captures } => todo!(),
+                        ServerMessage::AvailableMoves { moves } => todo!(),
+                        ServerMessage::BroadcastBoardState { board } => todo!(),
+                        ServerMessage::BroadcastCurrentTurn { active_player } => todo!(),
+                        ServerMessage::GameEnd { result } => todo!(),
                     }
-                    ServerMessage::AcceptHandshake { player_id } => todo!(),
-                    ServerMessage::DeclineHandshake { reason } => todo!(),
-                    ServerMessage::AvailableCaptures { captures } => todo!(),
-                    ServerMessage::AvailableMoves { moves } => todo!(),
-                    ServerMessage::BroadcastBoardState { board } => todo!(),
-                    ServerMessage::BroadcastCurrentTurn { active_player } => todo!(),
-                    ServerMessage::GameEnd { result } => todo!(),
                 }
             }
-        }
+        });
+    }
+
+    pub async fn send_text_message(&mut self, content: String) {
+        let msg = Message::new(TextMessage(content));
+        self.send_message(msg).await;
     }
 
     async fn send_message(&mut self, msg: Result<Message<ClientMessage>, postcard::Error>) {

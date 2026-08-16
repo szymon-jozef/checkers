@@ -120,17 +120,20 @@ impl Server {
 
                 msg_opt = self.reciever.recv() => {
                  if let Some(oldest_message) = msg_opt {
-                            let (_addr, msg) = oldest_message;
+                            let (addr, msg) = oldest_message;
 
                             match msg.content {
-                                ClientMessage::AnswerHandshake { player_name: _ } => {
-                                    self.process_handshake();
+                                ClientMessage::AnswerHandshake { player_name } => {
+                                    self.process_handshake(addr, player_name);
                                 }
                                 ClientMessage::RequestCapture { capture_path: _ } => {
                                     self.process_capture();
                                 }
                                 ClientMessage::RequestMove { from: _, to: _ } => {
                                     self.process_move();
+                                }
+                                ClientMessage::TextMessage (content) => {
+                                    info!("{} sent us a message: {}", addr, content);
                                 }
                             }
                  } else {
@@ -144,8 +147,9 @@ impl Server {
 
     /* ======= Processing messages :D helper functions ======== */
 
-    fn process_handshake(&self) {
-        todo!();
+    fn process_handshake(&self, addr: SocketAddr, player_name: String) {
+        info!("Client: {:?} sent us his name: {}", addr, player_name);
+        // TODO! Do something with this name i guess
     }
 
     fn process_capture(&self) {

@@ -1,4 +1,4 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use uuid::Uuid;
 
 use crate::logic::{
@@ -53,6 +53,8 @@ pub enum ClientMessage {
 
     RequestCapture { capture_path: CapturePath },
     RequestMove { from: Position, to: Position },
+
+    TextMessage(String),
 }
 
 pub struct Message<T>
