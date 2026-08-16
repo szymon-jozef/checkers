@@ -63,9 +63,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = String::new();
     loop {
         io::stdin().read_line(&mut buffer)?;
+        buffer.pop(); // remove \n
+
+        if buffer.is_empty() {
+            buffer.clear();
+            continue;
+        }
+
         let words: Vec<&str> = buffer.split_whitespace().collect();
         let cmd = words[0];
-        let mut args: String = words[1..].iter().map(|s| s.to_string() + " ").collect();
+        let mut args: String = words[1..].join(" ");
         args = args.trim().to_string();
 
         match CliCommands::try_from(cmd) {
