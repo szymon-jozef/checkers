@@ -68,7 +68,7 @@ impl Client {
             loop {
                 if let Some(oldest_msg) = conn_reciever_incoming.recv().await {
                     let (addr, msg) = oldest_msg;
-                    info!("Got message from: {:?}", addr);
+                    debug!("Got message from: {:?}", addr);
 
                     match msg.content {
                         ServerMessage::RequestHandshake => {
@@ -79,7 +79,9 @@ impl Client {
 
                             let _ = sender.send(msg.unwrap()).await;
                         }
-                        ServerMessage::AcceptHandshake { player_id } => todo!(),
+                        ServerMessage::AcceptHandshake => {
+                            info!("Server accepted us! Yay :D");
+                        }
                         ServerMessage::DeclineHandshake { reason } => {
                             error!("Server declined connection: {}", reason);
                             break;

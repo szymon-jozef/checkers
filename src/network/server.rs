@@ -175,7 +175,7 @@ impl Server {
 
                             match msg.content {
                                 ClientMessage::AnswerHandshake { player_name } => {
-                                    self.process_handshake(addr, player_name);
+                                    self.process_handshake(addr, player_name).await;
                                 }
 
                                 ClientMessage::ConnectionDead { addr } => {
@@ -183,7 +183,7 @@ impl Server {
                                     // TODO! Should decrement ready_counter if player was ready. But
                                     // how to check that? Maybe create new struct that will hold
                                     // sender and ready and maybe some other data.
-                                    self.connections.remove(&addr);
+                                    self.remove_client(addr);
                                 },
 
                                 ClientMessage::SignalReadiness => {
@@ -192,6 +192,8 @@ impl Server {
                                     if self.state.ready_count == self.settings.max_connections {
                                         info!("All players are ready! Changing state to ServerStage::Game");
                                         self.state.stage = ServerStage::Game;
+
+                                        self.start_game();
                                     }
                                 },
 
@@ -216,11 +218,17 @@ impl Server {
         }
     }
 
+    fn start_game(&self) {
+        todo!();
+    }
+
     /* ======= Processing messages :D helper functions ======== */
 
-    fn process_handshake(&self, addr: SocketAddr, player_name: String) {
+    async fn process_handshake(&mut self, addr: SocketAddr, player_name: String) {
         info!("Client: {:?} sent us his name: {}", addr, player_name);
-        // TODO! Do something with this name i guess
+        self.send_message(addr, Message::new(ServerMessage::AcceptHandshake))
+            .await;
+        // TODO! Validate if the name isn't already in use and append something to it if it is
     }
 
     fn process_capture(&mut self, capture_path: CapturePath) {

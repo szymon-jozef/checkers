@@ -37,7 +37,7 @@ where
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub enum ServerMessage {
     RequestHandshake,
-    AcceptHandshake { player_id: Uuid },
+    AcceptHandshake,
     DeclineHandshake { reason: String },
 
     AvailableCaptures { captures: Vec<CapturePath> },
