@@ -48,7 +48,7 @@ impl Server {
             allow_spectators: false,
         };
 
-        let (sender, mut reciever) =
+        let (sender, reciever) =
             tokio::sync::mpsc::channel::<(SocketAddr, Message<ClientMessage>)>(1024); // random
         // number
 
@@ -69,7 +69,7 @@ impl Server {
     }
 
     pub async fn start(&mut self) {
-        let (welcoming_tx, mut welcoming_rx) =
+        let (welcoming_tx, welcoming_rx) =
             tokio::sync::mpsc::channel::<(SocketAddr, Sender<Message<ServerMessage>>)>(10);
 
         self.welcoming_reciever = Some(welcoming_rx);

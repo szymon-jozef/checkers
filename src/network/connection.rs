@@ -138,7 +138,7 @@ where
                             self.send(msg).await;
                         },
                         None => {
-                            info!("Server closed the channel for {:?}. Disconnecting...", self.peer);
+                            info!("Remote closed the channel for {:?}. Disconnecting...", self.peer);
                             break;
                         }
                     }
