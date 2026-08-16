@@ -1,11 +1,9 @@
 use std::{
     fmt::Display,
     io::{self, Write},
-    time::Duration,
 };
 
 use checkers::network::client::Client;
-use env_logger::TimestampPrecision::Seconds;
 use log::{error, info};
 
 const QUIT_COMMAND: &str = "/quit";

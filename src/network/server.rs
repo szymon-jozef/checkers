@@ -16,6 +16,7 @@ use crate::{
             ClientMessage::{self},
             Message, ServerMessage,
         },
+        network_identity::{NetworkIdentity, NetworkServerIdentity},
     },
 };
 
@@ -49,7 +50,7 @@ impl Default for ServerState {
 
 pub struct Server {
     listener: Option<TcpListener>,
-    connections: HashMap<SocketAddr, Sender<Message<ServerMessage>>>,
+    connections: HashMap<SocketAddr, NetworkServerIdentity>,
 
     reciever: Receiver<(SocketAddr, Message<ClientMessage>)>,
     sender: Sender<(SocketAddr, Message<ClientMessage>)>,
@@ -126,6 +127,7 @@ impl Server {
                         // TODO! Add waiting for reconnect
 
                         let disconnect_msg = Message::new(ClientMessage::ConnectionDead { addr });
+
                         let _ = disconnect_sender
                             .send((
                                 addr,
@@ -147,7 +149,8 @@ impl Server {
                 new_client_opt = self.welcoming_reciever.as_mut().expect("Welcoming reciever was not set. Was the server started?").recv() => {
                     if let Some((addr, sender)) = new_client_opt {
                         if self.state.stage == ServerStage::Lobby && self.connections.keys().len() < self.settings.max_connections && !self.settings.allow_spectators {
-                            self.connections.insert(addr, sender);
+                            let identity = NetworkServerIdentity::new(sender);
+                            self.connections.insert(addr, identity);
                             self.request_handshake(addr).await;
                         } else {
                             let reason = "There is currently game going and it doesn't allow spectators".to_string();
@@ -183,16 +186,25 @@ impl Server {
                                     // TODO! Should decrement ready_counter if player was ready. But
                                     // how to check that? Maybe create new struct that will hold
                                     // sender and ready and maybe some other data.
+
+                                    let is_ready = &mut self.connections.get_mut(&addr).expect("Couldn't get the identity of disconnected player. I don't think i should panic but i don't care fuck you").identity.is_ready;
+
+                                    if *is_ready {
+                                        *is_ready = false;
+                                        self.state.ready_count -= 1;
+                                        info!("Currently {}/{} players are ready", self.state.ready_count, self.settings.max_connections);
+                                    }
                                     self.remove_client(addr);
                                 },
 
                                 ClientMessage::SignalReadiness => {
                                     self.state.ready_count += 1;
                                     info!("{} signaled readiness. Currently ready: {}/{}", addr, self.state.ready_count, self.settings.max_connections);
+                                    self.connections.get_mut(&addr).expect("Couldn't get the identity of the ready player. I guess this should never happen so i'm panicking like a little bitch").identity.is_ready = true;
+
                                     if self.state.ready_count == self.settings.max_connections {
                                         info!("All players are ready! Changing state to ServerStage::Game");
                                         self.state.stage = ServerStage::Game;
-
                                         self.start_game();
                                     }
                                 },
@@ -228,6 +240,26 @@ impl Server {
         info!("Client: {:?} sent us his name: {}", addr, player_name);
         self.send_message(addr, Message::new(ServerMessage::AcceptHandshake))
             .await;
+
+        let fixed_name: String;
+
+        if self
+            .connections
+            .values()
+            .any(|v| v.identity.name == player_name)
+        {
+            fixed_name = format!("{}(2)", player_name)
+        } else {
+            fixed_name = player_name
+        }
+
+        let Some(identity) = self.connections.get_mut(&addr) else {
+            error!("Could not get network identity while processing the handshake!");
+            return;
+        };
+
+        identity.identity.name = fixed_name
+
         // TODO! Validate if the name isn't already in use and append something to it if it is
     }
 
@@ -263,8 +295,8 @@ impl Server {
     ) {
         let conn_opt = self.connections.get_mut(&addr);
 
-        let Some(conn) = conn_opt else {
-            error!("Could not get connection from connections list");
+        let Some(identity) = conn_opt else {
+            error!("Could not get identity from connections list");
             return;
         };
 
@@ -273,7 +305,7 @@ impl Server {
                 error!("There was an error while creating message: {}", e);
                 return;
             }
-            Ok(msg) => conn.send(msg).await,
+            Ok(msg) => identity.sender.send(msg).await,
         };
     }
 
