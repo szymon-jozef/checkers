@@ -32,7 +32,9 @@ impl Position {
         trace!("Adding row: {} + {} = {}", self.row, delta.row, new_row);
         trace!(
             "Adding column: {} + {} = {}",
-            self.column, delta.column, new_column
+            self.column,
+            delta.column,
+            new_column
         );
 
         Some(Position {

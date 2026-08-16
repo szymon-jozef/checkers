@@ -4,7 +4,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
 };
 use tokio::{
-    net::{TcpListener, TcpStream},
+    net::TcpListener,
     sync::mpsc::{Receiver, Sender},
 };
 
@@ -13,7 +13,7 @@ use crate::{
     network::{
         connection::{Connection, ConnectionType},
         message::{
-            ClientMessage::{self, AnswerHandshake, RequestCapture, RequestMove},
+            ClientMessage::{self},
             Message, ServerMessage,
         },
     },
@@ -27,10 +27,14 @@ pub struct ServerSettings {
 }
 
 pub struct Server {
-    listener: TcpListener,
+    listener: Option<TcpListener>,
     connections: HashMap<SocketAddr, Sender<Message<ServerMessage>>>,
+
     reciever: Receiver<(SocketAddr, Message<ClientMessage>)>,
     sender: Sender<(SocketAddr, Message<ClientMessage>)>,
+
+    welcoming_reciever: Option<Receiver<(SocketAddr, Sender<Message<ServerMessage>>)>>,
+
     game_master: Option<GameMaster>,
     settings: ServerSettings,
 }
@@ -49,74 +53,83 @@ impl Server {
         // number
 
         Server {
-            listener: TcpListener::bind(settings.addr)
-                .await
-                .expect("Could not start the server"), // TODO! Handle this nicely, as this will
+            listener: Some(
+                TcpListener::bind(settings.addr)
+                    .await
+                    .expect("Could not start the server"),
+            ), // TODO! Handle this nicely, as this will
             // crash gui app
             connections: HashMap::new(),
             sender,
             reciever,
+            welcoming_reciever: None,
             game_master: None,
             settings,
         }
     }
 
     pub async fn start(&mut self) {
-        self.start_listening().await;
-    }
+        let (welcoming_tx, mut welcoming_rx) =
+            tokio::sync::mpsc::channel::<(SocketAddr, Sender<Message<ServerMessage>>)>(10);
 
-    async fn start_listening(&mut self) {
-        // TODO! Maybe allow connection and then gently refuse with reason?
-        while self.connections.len() < self.settings.max_connections
-            && !self.settings.allow_spectators
-        {
-            match self.listener.accept().await {
-                Ok((socket, addr)) => {
-                    self.handle_new_client(socket, addr);
-                }
-                Err(e) => {
-                    error!("Error while accepting a new connection: {}", e);
+        self.welcoming_reciever = Some(welcoming_rx);
+
+        let listener = self
+            .listener
+            .take()
+            .expect("Cannot start the server without tcp listener.");
+
+        let sender = self.sender.clone();
+
+        tokio::spawn(async move {
+            loop {
+                if let Ok((socket, addr)) = listener.accept().await {
+                    info!("New connection from: {:?}", addr);
+                    let mut conn: Connection<ClientMessage, ServerMessage> =
+                        Connection::new(ConnectionType::Client, sender.clone());
+
+                    conn.delegate(socket, addr);
+
+                    let sender = conn.get_sender();
+                    let _ = welcoming_tx.send((addr, sender)).await;
+
+                    tokio::spawn(async move {
+                        conn.start_listening().await;
+                    });
                 }
             }
-        }
-    }
-
-    fn handle_new_client(&mut self, socket: TcpStream, addr: SocketAddr) {
-        info!("New connection from: {:?}", addr);
-        let mut conn: Connection<ClientMessage, ServerMessage> =
-            Connection::new(ConnectionType::Client, self.sender.clone());
-
-        conn.delegate(socket, addr);
-        let sender = conn.get_sender();
-
-        self.connections.insert(addr, sender);
-
-        self.listen_client(conn);
-    }
-
-    fn listen_client(&mut self, mut conn: Connection<ClientMessage, ServerMessage>) {
-        tokio::spawn(async move {
-            conn.start_listening().await;
         });
     }
 
     /// Process incoming messages
     pub async fn update(&mut self) {
-        let Some(oldest_message) = self.reciever.recv().await else {
-            return;
-        };
+        loop {
+            tokio::select! {
+                new_client_opt = self.welcoming_reciever.as_mut().expect("Welcoming reciever was not set. Was the server started?").recv() => {
+                    if let Some((addr, sender)) = new_client_opt {
+                        // TODO! Check size options etc
+                        self.connections.insert(addr, sender);
+                        self.request_handshake(addr).await;
+                    }
+                }
 
-        let (addr, msg) = oldest_message;
+                msg_opt = self.reciever.recv() => {
+                 if let Some(oldest_message) = msg_opt {
+                            let (_addr, msg) = oldest_message;
 
-        match msg.content {
-            ClientMessage::AnswerHandshake { player_name } => {
-                self.process_handshake();
-            }
-            ClientMessage::RequestCapture { capture_path } => {
-                self.process_capture();
-            }
-            ClientMessage::RequestMove { from, to } => {
-                self.process_move();
+                            match msg.content {
+                                ClientMessage::AnswerHandshake { player_name: _ } => {
+                                    self.process_handshake();
+                                }
+                                ClientMessage::RequestCapture { capture_path: _ } => {
+                                    self.process_capture();
+                                }
+                                ClientMessage::RequestMove { from: _, to: _ } => {
+                                    self.process_move();
+                                }
+                            }
+                 }
+                }
             }
         }
     }
