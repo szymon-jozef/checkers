@@ -2,7 +2,8 @@ use std::io;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 
-use log::{debug, error};
+use log::{debug, error, info};
+use tokio::sync::mpsc::Receiver;
 use tokio::{net::TcpStream, sync::mpsc::Sender};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -20,9 +21,11 @@ pub enum ConnectionType {
 pub struct Connection<Inbound, Outbound>
 where
     Inbound: MessageLike,
+    Outbound: MessageLike,
 {
     conn_type: ConnectionType,
-    sender: Sender<Message<Inbound>>,
+    sender: Sender<(SocketAddr, Message<Inbound>)>,
+    reciever: Option<Receiver<Message<Outbound>>>,
     tcp: Option<TcpStream>,
     peer: Option<SocketAddr>,
     outbound_type: PhantomData<Outbound>,
@@ -35,11 +38,12 @@ where
 {
     pub fn new(
         conn_type: ConnectionType,
-        sender: Sender<Message<Inbound>>,
+        sender: Sender<(SocketAddr, Message<Inbound>)>,
     ) -> Connection<Inbound, Outbound> {
         Connection {
             conn_type,
             sender,
+            reciever: None,
             tcp: None,
             peer: None,
             outbound_type: PhantomData,
@@ -79,7 +83,13 @@ where
         }
     }
 
-    pub async fn send(&mut self, msg: Message<Outbound>) {
+    pub fn get_sender(&mut self) -> Sender<Message<Outbound>> {
+        let (sender, reciever) = tokio::sync::mpsc::channel(1024);
+        self.reciever = Some(reciever);
+        sender
+    }
+
+    async fn send(&mut self, msg: Message<Outbound>) {
         let size = msg.size;
         let content = msg.content;
 
@@ -105,17 +115,38 @@ where
     }
 
     pub async fn start_listening(&mut self) {
-        loop {
-            let result = self.read_header().await;
+        let mut receiver = self
+            .reciever
+            .take()
+            .expect("Tried listening, but get_sender wasn't called");
 
-            if let Err(e) = result {
-                error!(
-                    "Error while reading data from connection with: {:?} {}. Connection is broken. Disconnecting...",
-                    self.peer, e
-                );
-                return;
+        loop {
+            tokio::select! {
+                result = self.read_header() => {
+                    if let Err(e) = result {
+                        error!(
+                            "Connection broken with {:?}: {}. Disconnecting...",
+                            self.peer, e
+                        );
+                        break;
+                    }
+                },
+
+                msg_opt = receiver.recv() => {
+                    match msg_opt {
+                        Some(msg) => {
+                            self.send(msg).await;
+                        },
+                        None => {
+                            info!("Server closed the channel for {:?}. Disconnecting...", self.peer);
+                            break;
+                        }
+                    }
+                }
             }
         }
+
+        self.reciever = Some(receiver);
     }
 
     async fn read_header(&mut self) -> Result<(), io::Error> {
@@ -151,7 +182,11 @@ where
 
                 match new_msg {
                     Ok(msg) => {
-                        if let Err(e) = self.sender.send(msg).await {
+                        if let Err(e) = self
+                            .sender
+                            .send((self.peer.expect("Couldn't get peer addr"), msg))
+                            .await
+                        {
                             error!("Erro while sending message to main thread: {}", e);
                         }
                         return Ok(());
