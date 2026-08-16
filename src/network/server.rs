@@ -105,22 +105,35 @@ impl Server {
 
         info!("Starting the server at: {:?}", listener.local_addr());
 
-        let sender = self.sender.clone();
+        let server_sender = self.sender.clone();
 
         tokio::spawn(async move {
             loop {
                 if let Ok((socket, addr)) = listener.accept().await {
                     info!("New connection from: {:?}", addr);
                     let mut conn: Connection<ClientMessage, ServerMessage> =
-                        Connection::new(ConnectionType::Client, sender.clone());
+                        Connection::new(ConnectionType::Client, server_sender.clone());
 
                     conn.delegate(socket, addr);
 
                     let sender = conn.get_sender();
+                    let disconnect_sender = server_sender.clone();
                     let _ = welcoming_tx.send((addr, sender)).await;
 
                     tokio::spawn(async move {
                         conn.start_listening().await;
+
+                        // TODO! Add waiting for reconnect
+
+                        let disconnect_msg = Message::new(ClientMessage::ConnectionDead { addr });
+                        let _ = disconnect_sender
+                            .send((
+                                addr,
+                                disconnect_msg.expect(
+                                    "Could not create disconnect msg. this shouldn't happen",
+                                ),
+                            ))
+                            .await;
                     });
                 }
             }
@@ -141,7 +154,6 @@ impl Server {
                             info!("Rejecting {}, because {}", addr, reason);
 
                             let msg = Message::new(ServerMessage::DeclineHandshake { reason: reason });
-
 
                             if let Ok(msg) = msg {
                             let _ = sender.send(msg).await; // we can't use send_message because we
@@ -165,6 +177,14 @@ impl Server {
                                 ClientMessage::AnswerHandshake { player_name } => {
                                     self.process_handshake(addr, player_name);
                                 }
+
+                                ClientMessage::ConnectionDead { addr } => {
+                                    warn!("Removing: {:?} from connection list", addr);
+                                    // TODO! Should decrement ready_counter if player was ready. But
+                                    // how to check that? Maybe create new struct that will hold
+                                    // sender and ready and maybe some other data.
+                                    self.connections.remove(&addr);
+                                },
 
                                 ClientMessage::SignalReadiness => {
                                     self.state.ready_count += 1;
@@ -235,5 +255,9 @@ impl Server {
             }
             Ok(msg) => conn.send(msg).await,
         };
+    }
+
+    fn remove_client(&mut self, addr: SocketAddr) {
+        self.connections.remove(&addr);
     }
 }

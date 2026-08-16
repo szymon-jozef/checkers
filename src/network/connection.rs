@@ -128,6 +128,7 @@ where
                             "Connection broken with {:?}: {}. Disconnecting...",
                             self.peer, e
                         );
+                        self.tcp = None;
                         break;
                     }
                 },
@@ -139,6 +140,7 @@ where
                         },
                         None => {
                             info!("Remote closed the channel for {:?}. Disconnecting...", self.peer);
+                            self.tcp = None;
                             break;
                         }
                     }

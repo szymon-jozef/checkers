@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use uuid::Uuid;
 
@@ -51,6 +53,8 @@ pub enum ServerMessage {
 pub enum ClientMessage {
     AnswerHandshake { player_name: String },
     SignalReadiness,
+
+    ConnectionDead { addr: SocketAddr },
 
     RequestCapture { capture_path: CapturePath },
     RequestMove { from: Position, to: Position },
