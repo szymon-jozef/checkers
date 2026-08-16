@@ -79,6 +79,8 @@ impl Server {
             .take()
             .expect("Cannot start the server without tcp listener.");
 
+        info!("Starting the server at: {:?}", listener.local_addr());
+
         let sender = self.sender.clone();
 
         tokio::spawn(async move {

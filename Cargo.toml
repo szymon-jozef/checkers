@@ -1,5 +1,5 @@
 [package]
-name = "Checkers"
+name = "checkers"
 description = "Game of checkers"
 version = "0.0.1"
 readme = "README.md"

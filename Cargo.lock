@@ -3,19 +3,6 @@
 version = 4
 
 [[package]]
-name = "Checkers"
-version = "0.0.1"
-dependencies = [
- "env_logger",
- "log",
- "postcard",
- "rand",
- "serde",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "aho-corasick"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -134,6 +121,19 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "rand_core",
+]
+
+[[package]]
+name = "checkers"
+version = "0.0.1"
+dependencies = [
+ "env_logger",
+ "log",
+ "postcard",
+ "rand",
+ "serde",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
