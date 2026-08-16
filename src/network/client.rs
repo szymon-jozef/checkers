@@ -24,7 +24,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn new() -> Client {
+    pub async fn new() -> Option<Client> {
         let settings = ClientSettings {
             server_url: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6767),
             name: "Szymon".into(),
@@ -38,17 +38,20 @@ impl Client {
 
         let conn_sender_outgoing = conn.get_sender();
 
-        conn.connect_to_server(settings.server_url).await;
+        if !conn.connect_to_server(settings.server_url).await {
+            error!("Could not connect with the server: {}", settings.server_url);
+            return None;
+        }
 
         tokio::spawn(async move {
             conn.start_listening().await;
         });
 
-        Client {
+        Some(Client {
             conn_reciever_incoming: Some(conn_reciever),
             conn_sender_outgoing,
             settings,
-        }
+        })
     }
 
     pub fn update(&mut self) {

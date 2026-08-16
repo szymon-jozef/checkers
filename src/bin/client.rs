@@ -6,7 +6,11 @@ use checkers::network::client::Client;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
-    let mut client: Client = Client::new().await;
+    let Some(mut client) = Client::new().await else {
+        println!("Not worky, ending");
+        return Ok(());
+    };
+
     client.update();
 
     println!("=== Write to stding to send text messages ===");
