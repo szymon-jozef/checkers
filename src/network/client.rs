@@ -6,7 +6,7 @@ use tokio::sync::mpsc::{self, Receiver, Sender};
 use crate::network::{
     connection::{Connection, ConnectionType},
     message::{
-        ClientMessage::{self, TextMessage},
+        ClientMessage::{self, SignalReadiness, TextMessage},
         Message, ServerMessage,
     },
 };
@@ -80,7 +80,10 @@ impl Client {
                             let _ = sender.send(msg.unwrap()).await;
                         }
                         ServerMessage::AcceptHandshake { player_id } => todo!(),
-                        ServerMessage::DeclineHandshake { reason } => todo!(),
+                        ServerMessage::DeclineHandshake { reason } => {
+                            error!("Server declined connection: {}", reason);
+                            break;
+                        }
                         ServerMessage::AvailableCaptures { captures } => todo!(),
                         ServerMessage::AvailableMoves { moves } => todo!(),
                         ServerMessage::BroadcastBoardState { board } => todo!(),
@@ -96,7 +99,14 @@ impl Client {
     }
 
     pub async fn send_text_message(&mut self, content: String) {
+        debug!("Seding text message: {}", content);
         let msg = Message::new(TextMessage(content));
+        self.send_message(msg).await;
+    }
+
+    pub async fn signal_readiness(&mut self) {
+        debug!("Signaling readiness!");
+        let msg = Message::new(SignalReadiness);
         self.send_message(msg).await;
     }
 

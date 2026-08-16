@@ -50,6 +50,7 @@ pub enum ServerMessage {
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub enum ClientMessage {
     AnswerHandshake { player_name: String },
+    SignalReadiness,
 
     RequestCapture { capture_path: CapturePath },
     RequestMove { from: Position, to: Position },

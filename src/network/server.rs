@@ -26,6 +26,27 @@ pub struct ServerSettings {
     pub allow_spectators: bool,
 }
 
+#[derive(PartialEq)]
+enum ServerStage {
+    Lobby,
+    Game,
+    End,
+}
+
+struct ServerState {
+    ready_count: usize,
+    stage: ServerStage,
+}
+
+impl Default for ServerState {
+    fn default() -> Self {
+        Self {
+            ready_count: 0,
+            stage: ServerStage::Lobby,
+        }
+    }
+}
+
 pub struct Server {
     listener: Option<TcpListener>,
     connections: HashMap<SocketAddr, Sender<Message<ServerMessage>>>,
@@ -37,6 +58,8 @@ pub struct Server {
 
     game_master: Option<GameMaster>,
     settings: ServerSettings,
+
+    state: ServerState,
 }
 
 impl Server {
@@ -65,6 +88,7 @@ impl Server {
             welcoming_reciever: None,
             game_master: None,
             settings,
+            state: ServerState::default(),
         }
     }
 
@@ -109,9 +133,13 @@ impl Server {
             tokio::select! {
                 new_client_opt = self.welcoming_reciever.as_mut().expect("Welcoming reciever was not set. Was the server started?").recv() => {
                     if let Some((addr, sender)) = new_client_opt {
-                        // TODO! Check size options etc
-                        self.connections.insert(addr, sender);
-                        self.request_handshake(addr).await;
+                        if self.state.stage == ServerStage::Lobby && self.connections.keys().len() < self.settings.max_connections && !self.settings.allow_spectators {
+                            self.connections.insert(addr, sender);
+                            self.request_handshake(addr).await;
+                        } else {
+                            let msg = Message::new(ServerMessage::DeclineHandshake { reason: "There is currently game going and it doesn't allow spectators".to_string() });
+                            self.send_message(addr, msg).await;
+                        }
                     } else {
                         warn!("Welcoming reciever closed!");
                         break;
@@ -126,12 +154,24 @@ impl Server {
                                 ClientMessage::AnswerHandshake { player_name } => {
                                     self.process_handshake(addr, player_name);
                                 }
+
+                                ClientMessage::SignalReadiness => {
+                                    self.state.ready_count += 1;
+                                    info!("{} signaled readiness. Currently ready: {}/{}", addr, self.state.ready_count, self.settings.max_connections);
+                                    if self.state.ready_count == self.settings.max_connections {
+                                        info!("All players are ready! Changing state to ServerStage::Game");
+                                        self.state.stage = ServerStage::Game;
+                                    }
+                                },
+
                                 ClientMessage::RequestCapture { capture_path: _ } => {
                                     self.process_capture();
                                 }
+
                                 ClientMessage::RequestMove { from: _, to: _ } => {
                                     self.process_move();
                                 }
+
                                 ClientMessage::TextMessage (content) => {
                                     info!("{} sent us a message: {}", addr, content);
                                 }
