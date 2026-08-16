@@ -87,6 +87,9 @@ impl Client {
                         ServerMessage::BroadcastCurrentTurn { active_player } => todo!(),
                         ServerMessage::GameEnd { result } => todo!(),
                     }
+                } else {
+                    error!("Connection broken");
+                    break;
                 }
             }
         });

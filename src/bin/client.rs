@@ -22,6 +22,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
 
+        if buffer == "/test\n" {
+            buffer = String::from("A").repeat(1024 * 1024 * 2);
+        }
+
         client.send_text_message(buffer.clone()).await;
         buffer.clear();
     }

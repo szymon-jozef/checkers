@@ -162,6 +162,17 @@ where
     }
 
     async fn read_content(&mut self, size_to_read: u32) -> Result<(), io::Error> {
+        let max_size = 1024 * 1024 * 2;
+
+        if size_to_read > max_size {
+            error!(
+                "Message sent exeeds the limit. Sent {}, max: {}",
+                size_to_read, max_size
+            );
+            self.tcp = None;
+            return Err(io::ErrorKind::InvalidData.into());
+        }
+
         let mut buff: Vec<u8> = vec![0; size_to_read as usize];
 
         let Some(tcp) = &mut self.tcp else {
