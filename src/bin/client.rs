@@ -1,6 +1,11 @@
-use std::{fmt::Display, io};
+use std::{
+    fmt::Display,
+    io::{self, Write},
+    time::Duration,
+};
 
 use checkers::network::client::Client;
+use env_logger::TimestampPrecision::Seconds;
 use log::{error, info};
 
 const QUIT_COMMAND: &str = "/quit";
@@ -62,6 +67,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("====== Type /help for help ========");
     let mut buffer = String::new();
     loop {
+        print!("> ");
+        io::stdout().flush()?;
+
         io::stdin().read_line(&mut buffer)?;
         buffer.pop(); // remove \n
 
