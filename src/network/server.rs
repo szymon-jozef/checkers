@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::{error, info, warn};
 use std::{
     collections::HashMap,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -110,6 +110,9 @@ impl Server {
                         // TODO! Check size options etc
                         self.connections.insert(addr, sender);
                         self.request_handshake(addr).await;
+                    } else {
+                        warn!("Welcoming reciever closed!");
+                        break;
                     }
                 }
 
@@ -128,6 +131,9 @@ impl Server {
                                     self.process_move();
                                 }
                             }
+                 } else {
+                     warn!("Couldn't get latest message!");
+                     break;
                  }
                 }
             }
