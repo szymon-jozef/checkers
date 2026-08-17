@@ -4,7 +4,7 @@ use std::{
 };
 
 use checkers::network::client::Client;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use tokio::sync::mpsc;
 
 const QUIT_COMMAND: &str = "/quit";
@@ -54,90 +54,104 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (client_sender, mut client_receiver) = mpsc::channel(1024);
 
     client.set_update_sender(client_sender);
-
     client.update();
 
+    let (stdin_sender, mut stdin_receiver) = mpsc::channel(1024);
+
+    tokio::task::spawn_blocking(move || {
+        let stdin = std::io::stdin();
+
+        loop {
+            let mut buffer = String::new();
+            if stdin.read_line(&mut buffer).is_ok() {
+                if stdin_sender.blocking_send(buffer).is_err() {
+                    break;
+                }
+            }
+        }
+    });
+
     let help_msg: String = format!(
-        "\n┌────Help────
-│\t {} - quit
-│\t {} - show this message
+        "\n┌────Help────────────────────────────
+│\t {} - quit                        
+│\t {} - show this message             
 │\t {} - message the server you're ready
 │\t {} - send text message to the server
+└───────────────────────────────────────
         ",
         QUIT_COMMAND, HELP_COMMAND, READY_COMMAND, SEND_COMMAND,
     );
 
-    info!("====== Type /help for help ========");
-    let mut buffer = String::new();
+    info!("───────Type /help for help───────");
     loop {
-        print!("> ");
-        io::stdout().flush()?;
+        tokio::select! {
+        msg = client_receiver.recv() => {
+            match msg {
+                Some(checkers::network::client::ClientData::GameStart {
+                    identity,
+                    board_view,
+                }) => {
+                    info!(
+                        "Got new identity: {} and board_view. Game is about to start!",
+                        identity
+                    );
+                    println!("{}", board_view.to_string(identity.id));
+                }
 
-        io::stdin().read_line(&mut buffer)?;
-        buffer.pop(); // remove \n
+                Some(checkers::network::client::ClientData::AvailableCaptures(capture_paths)) => {
+                    todo!()
+                }
 
-        match client_receiver.try_recv() {
-            Ok(checkers::network::client::ClientData::GameStart {
-                identity,
-                board_view,
-            }) => {
-                info!(
-                    "Got new identity: {} and board_view. Game is about to start!",
-                    identity
-                );
-                println!("{}", board_view.to_string(identity.id));
+                Some(checkers::network::client::ClientData::AvailableMoves(move_paths)) => todo!(),
+
+                Some(checkers::network::client::ClientData::TextMessage(content)) => {
+                    info!("Got message from the server: {}", content);
+                }
+
+                Some(checkers::network::client::ClientData::GameEnd(game_result)) => {
+                    info!("Game has ended with the result: {:?}", game_result);
+                }
+
+                None => {
+                    warn!("Connection broken! Stopping");
+                    break Ok(());
+                }
+            }
             }
 
-            Ok(checkers::network::client::ClientData::AvailableCaptures(capture_paths)) => {
-                todo!()
+        buffer_opt = stdin_receiver.recv() => {
+            if let Some(mut buffer) = buffer_opt {
+                buffer.pop(); // remove \n
+
+                if !buffer.is_empty() {
+                    let words: Vec<&str> = buffer.split_whitespace().collect();
+                    let cmd = words[0];
+                    let mut args: String = words[1..].join(" ");
+                    args = args.trim().to_string();
+
+                    match CliCommands::try_from(cmd) {
+                        Ok(cmd) => match cmd {
+                            CliCommands::Quit => {
+                                info!("Bye bye");
+                                std::process::exit(0);
+                            }
+                            CliCommands::Help => {
+                                info!("{}", help_msg);
+                            }
+                            CliCommands::Ready => {
+                                client.signal_readiness().await;
+                            }
+                            CliCommands::Send => {
+                                client.send_text_message(args).await;
+                            }
+                        },
+                        Err(e) => error!("{}", e),
+                    }
+                }
+                print!("> ");
+                io::stdout().flush()?;
             }
-
-            Ok(checkers::network::client::ClientData::AvailableMoves(move_paths)) => todo!(),
-
-            Ok(checkers::network::client::ClientData::TextMessage(content)) => {
-                info!("Got message from the server: {}", content);
-            }
-
-            Ok(checkers::network::client::ClientData::GameEnd(game_result)) => {
-                info!("Game has ended with the result: {:?}", game_result);
-            }
-
-            _ => {}
         }
-
-        if buffer.is_empty() {
-            buffer.clear();
-            continue;
         }
-
-        let words: Vec<&str> = buffer.split_whitespace().collect();
-        let cmd = words[0];
-        let mut args: String = words[1..].join(" ");
-        args = args.trim().to_string();
-
-        match CliCommands::try_from(cmd) {
-            Ok(cmd) => match cmd {
-                CliCommands::Quit => {
-                    info!("Bye bye");
-                    break;
-                }
-                CliCommands::Help => {
-                    info!("{}", help_msg);
-                    buffer.clear();
-                }
-                CliCommands::Ready => {
-                    client.signal_readiness().await;
-                    buffer.clear();
-                }
-                CliCommands::Send => {
-                    client.send_text_message(args).await;
-                    buffer.clear();
-                }
-            },
-            Err(e) => error!("{}", e),
-        }
-        buffer.clear();
     }
-
-    return Ok(());
 }
