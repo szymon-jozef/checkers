@@ -51,6 +51,8 @@ pub enum ServerMessage {
         board_view: BoardView,
     },
 
+    BoardState(BoardView),
+
     AvailableCaptures {
         captures: Vec<CapturePath>,
     },
@@ -83,6 +85,7 @@ pub enum ClientMessage {
     TextMessage(String),
 }
 
+#[derive(Clone)]
 pub struct Message<T>
 where
     T: MessageLike,

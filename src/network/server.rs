@@ -288,8 +288,6 @@ impl Server {
         };
 
         identity.identity.name = fixed_name
-
-        // TODO! Validate if the name isn't already in use and append something to it if it is
     }
 
     fn process_capture(&mut self, capture_path: CapturePath) {
@@ -317,6 +315,23 @@ impl Server {
         self.send_message(addr, msg).await;
     }
 
+    async fn handle_readiness(&mut self, addr: SocketAddr) {
+        self.state.ready_count += 1;
+        info!(
+            "{} signaled readiness. Currently ready: {}/{}",
+            addr, self.state.ready_count, self.settings.max_connections
+        );
+        self.connections.get_mut(&addr).expect("Couldn't get the identity of the ready player. I guess this should never happen so i'm panicking like a little bitch").identity.is_ready = true;
+
+        if self.state.ready_count == self.settings.max_connections {
+            info!("All players are ready! Changing state to ServerStage::Game");
+            self.state.stage = ServerStage::Game;
+            self.start_game().await;
+        }
+    }
+
+    /* === Helper methods === */
+
     async fn send_message(
         &mut self,
         addr: SocketAddr,
@@ -338,18 +353,17 @@ impl Server {
         };
     }
 
-    async fn handle_readiness(&mut self, addr: SocketAddr) {
-        self.state.ready_count += 1;
-        info!(
-            "{} signaled readiness. Currently ready: {}/{}",
-            addr, self.state.ready_count, self.settings.max_connections
-        );
-        self.connections.get_mut(&addr).expect("Couldn't get the identity of the ready player. I guess this should never happen so i'm panicking like a little bitch").identity.is_ready = true;
-
-        if self.state.ready_count == self.settings.max_connections {
-            info!("All players are ready! Changing state to ServerStage::Game");
-            self.state.stage = ServerStage::Game;
-            self.start_game().await;
+    async fn broadcast_message(&mut self, msg: Result<Message<ServerMessage>, postcard::Error>) {
+        match msg {
+            Ok(msg) => {
+                for identity in self.connections.values_mut() {
+                    identity.sender.send(msg.clone()).await;
+                }
+            }
+            Err(e) => {
+                error!("Error while broadcasting the message: {}", e);
+                return;
+            }
         }
     }
 
