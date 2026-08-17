@@ -39,10 +39,7 @@ pub enum ClientCommands {
 /// Data that network client gives to normal client. I have no better idea for this name, hence this
 /// comment
 pub enum ClientData {
-    GameStart {
-        identity: NetworkIdentity,
-        board_view: BoardView,
-    },
+    GameStart { identity: NetworkIdentity },
     GameEnd(GameResult),
 
     AvailableCaptures(Vec<CapturePath>),
@@ -167,10 +164,9 @@ impl Client {
 
                             ServerMessage::GameStart {
                                 identity,
-                                board_view,
                             } => {
                                 debug!("Got GameStart message! Identity: {}", identity);
-                                let _ = update_sender.send(ClientData::GameStart { identity, board_view }).await;
+                                let _ = update_sender.send(ClientData::GameStart { identity }).await;
                             }
 
                             ServerMessage::AvailableCaptures { captures } => todo!(),

@@ -195,11 +195,11 @@ impl Server {
                                 },
 
                                 ClientMessage::RequestCapture { capture_path } => {
-                                    self.process_capture(capture_path);
+                                    self.process_capture(capture_path).await;
                                 }
 
                                 ClientMessage::RequestMove { from, to } => {
-                                    self.process_move(from, to);
+                                    self.process_move(from, to).await;
                                 }
 
                                 ClientMessage::TextMessage (content) => {
@@ -232,7 +232,6 @@ impl Server {
         let game_master = GameMaster::new(&names[0], &names[1]);
 
         let names_and_ids: Vec<(String, Uuid)> = game_master.get_players_names_and_ids();
-        let board_view: BoardView = game_master.get_board_view();
 
         let mut msgs: Vec<(SocketAddr, Result<Message<ServerMessage>, postcard::Error>)> = vec![];
 
@@ -245,7 +244,6 @@ impl Server {
                         *addr,
                         Message::new(ServerMessage::GameStart {
                             identity: networkidentity.identity.clone(),
-                            board_view: board_view.clone(),
                         }),
                     ));
                 }
@@ -324,7 +322,7 @@ impl Server {
             "{} signaled readiness. Currently ready: {}/{}",
             addr, self.state.ready_count, self.settings.max_connections
         );
-        self.connections.get_mut(&addr).expect("Couldn't get the identity of the ready player. I guess this should never happen so i'm panicking like a little bitch").identity.is_ready = true;
+        self.connections.get_mut(&addr).expect("Couldn't get the identity of the ready player. I guess this should never happen so i'm panicking like a little bitch").identity.is_ready = true; // TODO! This sometimes happens for some reason (when there is a game going, both player leave and someone tries to join)
 
         if self.state.ready_count == self.settings.max_connections {
             info!("All players are ready! Changing state to ServerStage::Game");

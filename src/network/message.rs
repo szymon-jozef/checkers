@@ -42,33 +42,18 @@ where
 pub enum ServerMessage {
     RequestHandshake,
     AcceptHandshake,
-    DeclineHandshake {
-        reason: String,
-    },
+    DeclineHandshake { reason: String },
 
-    GameStart {
-        identity: NetworkIdentity,
-        board_view: BoardView,
-    },
+    GameStart { identity: NetworkIdentity },
 
-    AvailableCaptures {
-        captures: Vec<CapturePath>,
-    },
-    AvailableMoves {
-        moves: Vec<MovePath>,
-    },
+    AvailableCaptures { captures: Vec<CapturePath> },
+    AvailableMoves { moves: Vec<MovePath> },
 
-    BroadcastBoardState {
-        board: BoardView,
-    },
+    BroadcastBoardState { board: BoardView },
 
-    BroadcastCurrentTurn {
-        active_player: Uuid,
-    },
+    BroadcastCurrentTurn { active_player: Uuid },
 
-    GameEnd {
-        result: GameResult,
-    },
+    GameEnd { result: GameResult },
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]

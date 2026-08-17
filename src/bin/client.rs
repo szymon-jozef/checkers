@@ -96,13 +96,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match msg {
                 Some(ClientData::GameStart {
                     identity,
-                    board_view,
                 }) => {
                     info!(
-                        "Got new identity: {} and board_view. Game is about to start!",
+                        "Got new identity: {}",
                         identity
                     );
-                    println!("{}", board_view.to_string(&identity.id));
                     indentity = Some(identity);
                 }
 
