@@ -1,10 +1,17 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
 use crate::{
-    logic::board::board_view::BoardView,
+    logic::{
+        board::{
+            board_view::BoardView,
+            pawn::{CapturePath, MovePath},
+        },
+        game_master::GameResult,
+        math::position::Position,
+    },
     network::{
         connection::{Connection, ConnectionType},
         message::{
@@ -21,14 +28,35 @@ pub struct ClientSettings {
     name: String,
 }
 
+pub enum ClientCommands {
+    SendCapture(CapturePath),
+    SendMove { from: Position, to: Position },
+    SendText(String),
+    SendReady,
+}
+
+/// Data that network client gives to normal client. I have no better idea for this name, hence this
+/// comment
+pub enum ClientData {
+    GameStart {
+        identity: NetworkIdentity,
+        board_view: BoardView,
+    },
+    AvailableCaptures(Vec<CapturePath>),
+    AvailableMoves(Vec<MovePath>),
+    TextMessage(String),
+    GameEnd(GameResult),
+}
+
 pub struct Client {
     conn_reciever_incoming: Option<Receiver<(SocketAddr, Message<ServerMessage>)>>,
     conn_sender_outgoing: Sender<Message<ClientMessage>>,
     settings: ClientSettings,
 
-    identity: Option<NetworkIdentity>,
-    board_view: Option<BoardView>,
-    update_reciever: Option<Receiver<Message<ServerMessage>>>,
+    commands_sender: Option<Sender<ClientCommands>>,
+    commands_receiver: Option<Receiver<ClientCommands>>,
+
+    update_sender: Option<Sender<ClientData>>,
 }
 
 impl Client {
@@ -40,11 +68,11 @@ impl Client {
 
         let (conn_sender, conn_reciever) =
             mpsc::channel::<(SocketAddr, Message<ServerMessage>)>(1024);
-
         let mut conn: Connection<ServerMessage, ClientMessage> =
             Connection::new(ConnectionType::Server, conn_sender);
-
         let conn_sender_outgoing = conn.get_sender();
+
+        let (commands_sender, commands_receiver) = mpsc::channel(1024);
 
         if !conn.connect_to_server(settings.server_url).await {
             error!("Could not connect with the server: {}", settings.server_url);
@@ -58,11 +86,30 @@ impl Client {
         Some(Client {
             conn_reciever_incoming: Some(conn_reciever),
             conn_sender_outgoing,
+
             settings,
-            identity: None,
-            board_view: None,
-            update_reciever: None,
+
+            commands_receiver: Some(commands_receiver),
+            commands_sender: Some(commands_sender),
+
+            update_sender: None,
         })
+    }
+
+    pub fn get_commands_sender(&mut self) -> Option<Sender<ClientCommands>> {
+        if self.commands_sender.is_none() {
+            warn!("Tried taking commands sender a second time! This shouldn't happen");
+        }
+        self.commands_sender.take()
+    }
+
+    pub fn set_update_sender(&mut self, sender: Sender<ClientData>) {
+        if self.update_sender.is_some() {
+            warn!("Cannot set update sender a second time!");
+            return;
+        }
+
+        self.update_sender = Some(sender);
     }
 
     pub fn update(&mut self) {
@@ -71,89 +118,129 @@ impl Client {
             return;
         };
 
-        let sender = self.conn_sender_outgoing.clone();
+        let conn_sender = self.conn_sender_outgoing.clone();
+
+        let Some(update_sender) = self.update_sender.take() else {
+            error!("Update sender is missing. Cannot update!");
+            return;
+        };
+
+        let Some(mut commands_receiver) = self.commands_receiver.take() else {
+            error!("Commands receiver is missing! Cannot update.");
+            return;
+        };
 
         let settings = self.settings.clone();
 
-        let (update_sender, update_reciever) = mpsc::channel::<Message<ServerMessage>>(1024);
-        self.update_reciever = Some(update_reciever);
-
         tokio::spawn(async move {
             loop {
-                if let Some(oldest_msg) = conn_reciever_incoming.recv().await {
-                    let (addr, msg) = oldest_msg;
-                    debug!("Got message from: {:?}", addr);
+                tokio::select! {
+                    oldest_msg = conn_reciever_incoming.recv() => {
+                        if let Some(oldest_msg) = oldest_msg {
+                        let (addr, msg) = oldest_msg;
+                        debug!("Got message from: {:?}", addr);
 
-                    match msg.content {
-                        ServerMessage::RequestHandshake => {
-                            info!("Server requested handshake!");
-                            let msg = Message::new(ClientMessage::AnswerHandshake {
-                                player_name: settings.name.clone(),
-                            });
+                        match msg.content {
+                            ServerMessage::RequestHandshake => {
+                                info!("Server requested handshake!");
+                                let msg = Message::new(ClientMessage::AnswerHandshake {
+                                    player_name: settings.name.clone(),
+                                });
 
-                            let _ = sender.send(msg.unwrap()).await;
-                        }
+                                let _ = conn_sender.send(msg.unwrap()).await;
+                            }
 
-                        ServerMessage::AcceptHandshake => {
-                            info!("Server accepted us! Yay :D");
-                        }
+                            ServerMessage::AcceptHandshake => {
+                                info!("Server accepted us! Yay :D");
+                            }
 
-                        ServerMessage::DeclineHandshake { reason } => {
-                            error!("Server declined connection: {}", reason);
+                            ServerMessage::DeclineHandshake { reason } => {
+                                error!("Server declined connection: {}", reason);
+                                break;
+                            }
+
+                            ServerMessage::GameStart {
+                                identity,
+                                board_view,
+                            } => {
+                                debug!("Got GameStart message! Identity: {}", identity);
+                                let _ = update_sender.send(ClientData::GameStart { identity, board_view }).await;
+                            }
+
+                            ServerMessage::AvailableCaptures { captures } => todo!(),
+                            ServerMessage::AvailableMoves { moves } => todo!(),
+                            ServerMessage::BroadcastBoardState { board } => todo!(),
+                            ServerMessage::BroadcastCurrentTurn { active_player } => todo!(),
+                            ServerMessage::GameEnd { result } => todo!(),
+                            }
+                        } else {
+                            error!("Connection broken!");
                             break;
                         }
-
-                        ServerMessage::GameStart {
-                            identity,
-                            board_view,
-                        } => {
-                            info!("Server started the game!");
-                            info!("Our identity is: {}", identity);
-                            /*
-                            self.board_view = Some(board_view);
-                            self.identity = Some(identity);
-                            */
-                        }
-
-                        ServerMessage::AvailableCaptures { captures } => todo!(),
-                        ServerMessage::AvailableMoves { moves } => todo!(),
-                        ServerMessage::BroadcastBoardState { board } => todo!(),
-                        ServerMessage::BroadcastCurrentTurn { active_player } => todo!(),
-                        ServerMessage::GameEnd { result } => todo!(),
                     }
-                } else {
-                    error!("Connection broken");
-                    break;
+
+                    oldest_cmd = commands_receiver.recv() => {
+                        if let Some(oldest_cmd) = oldest_cmd {
+                            match oldest_cmd {
+                                ClientCommands::SendCapture(capture_path) => todo!(),
+
+                                ClientCommands::SendMove { from, to } => todo!(),
+
+                                ClientCommands::SendText(content) => {
+                                    debug!("Seding text message: {}", content);
+                                    let msg = Message::new(TextMessage(content));
+                                    send_message(msg, &conn_sender).await;
+                                },
+
+                                ClientCommands::SendReady => {
+                                    debug!("Signaling readiness!");
+                                    let msg = Message::new(SignalReadiness);
+                                    send_message(msg, &conn_sender).await;
+                                },
+                            }
+                        } else {
+                            error!("Couldn't decipher the command!");
+                            break;
+                        }
+                    }
+
                 }
             }
         });
     }
 
     pub async fn send_text_message(&mut self, content: String) {
-        debug!("Seding text message: {}", content);
-        let msg = Message::new(TextMessage(content));
-        self.send_message(msg).await;
+        if let Some(sender) = &self.commands_sender {
+            let _ = sender.send(ClientCommands::SendText(content)).await;
+        } else {
+            error!("Command sender not set!");
+        }
     }
 
     pub async fn signal_readiness(&mut self) {
-        debug!("Signaling readiness!");
-        let msg = Message::new(SignalReadiness);
-        self.send_message(msg).await;
+        if let Some(sender) = &self.commands_sender {
+            let _ = sender.send(ClientCommands::SendReady).await;
+        } else {
+            error!("Command sender not set!");
+        }
     }
+}
 
-    async fn send_message(&mut self, msg: Result<Message<ClientMessage>, postcard::Error>) {
-        debug!("Sending message to the server!");
-        let _ = match msg {
-            Err(e) => {
-                error!("There was an error while creating the message: {}", e);
+async fn send_message(
+    msg: Result<Message<ClientMessage>, postcard::Error>,
+    sender: &Sender<Message<ClientMessage>>,
+) {
+    debug!("Sending message to the server!");
+    let _ = match msg {
+        Err(e) => {
+            error!("There was an error while creating the message: {}", e);
+            return;
+        }
+        Ok(msg) => {
+            if let Err(e) = sender.send(msg).await {
+                error!("Error while sending a message to connection thread: {}", e);
                 return;
             }
-            Ok(msg) => {
-                if let Err(e) = self.conn_sender_outgoing.send(msg).await {
-                    error!("Error while sending a message to connection thread: {}", e);
-                    return;
-                }
-            }
-        };
-    }
+        }
+    };
 }

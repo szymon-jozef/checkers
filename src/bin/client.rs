@@ -4,7 +4,8 @@ use std::{
 };
 
 use checkers::network::client::Client;
-use log::{error, info};
+use log::{debug, error, info};
+use tokio::sync::mpsc;
 
 const QUIT_COMMAND: &str = "/quit";
 const HELP_COMMAND: &str = "/help";
@@ -50,6 +51,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     };
 
+    let (client_sender, mut client_receiver) = mpsc::channel(1024);
+
+    client.set_update_sender(client_sender);
+
+    client.update();
+
     let help_msg: String = format!(
         "\n┌────Help────
 │\t {} - quit
@@ -60,8 +67,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         QUIT_COMMAND, HELP_COMMAND, READY_COMMAND, SEND_COMMAND,
     );
 
-    client.update();
-
     info!("====== Type /help for help ========");
     let mut buffer = String::new();
     loop {
@@ -70,6 +75,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         io::stdin().read_line(&mut buffer)?;
         buffer.pop(); // remove \n
+
+        match client_receiver.try_recv() {
+            Ok(checkers::network::client::ClientData::GameStart {
+                identity,
+                board_view,
+            }) => {
+                info!(
+                    "Got new identity: {} and board_view. Game is about to start!",
+                    identity
+                );
+            }
+
+            Ok(checkers::network::client::ClientData::AvailableCaptures(capture_paths)) => {
+                todo!()
+            }
+
+            Ok(checkers::network::client::ClientData::AvailableMoves(move_paths)) => todo!(),
+
+            Ok(checkers::network::client::ClientData::TextMessage(content)) => {
+                info!("Got message from the server: {}", content);
+            }
+
+            Ok(checkers::network::client::ClientData::GameEnd(game_result)) => {
+                info!("Game has ended with the result: {:?}", game_result);
+            }
+
+            _ => {}
+        }
 
         if buffer.is_empty() {
             buffer.clear();
