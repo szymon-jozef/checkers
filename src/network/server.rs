@@ -182,31 +182,11 @@ impl Server {
                                 }
 
                                 ClientMessage::ConnectionDead { addr } => {
-                                    warn!("Removing: {:?} from connection list", addr);
-                                    // TODO! Should decrement ready_counter if player was ready. But
-                                    // how to check that? Maybe create new struct that will hold
-                                    // sender and ready and maybe some other data.
-
-                                    let is_ready = &mut self.connections.get_mut(&addr).expect("Couldn't get the identity of disconnected player. I don't think i should panic but i don't care fuck you").identity.is_ready;
-
-                                    if *is_ready {
-                                        *is_ready = false;
-                                        self.state.ready_count -= 1;
-                                        info!("Currently {}/{} players are ready", self.state.ready_count, self.settings.max_connections);
-                                    }
                                     self.remove_client(addr);
                                 },
 
                                 ClientMessage::SignalReadiness => {
-                                    self.state.ready_count += 1;
-                                    info!("{} signaled readiness. Currently ready: {}/{}", addr, self.state.ready_count, self.settings.max_connections);
-                                    self.connections.get_mut(&addr).expect("Couldn't get the identity of the ready player. I guess this should never happen so i'm panicking like a little bitch").identity.is_ready = true;
-
-                                    if self.state.ready_count == self.settings.max_connections {
-                                        info!("All players are ready! Changing state to ServerStage::Game");
-                                        self.state.stage = ServerStage::Game;
-                                        self.start_game();
-                                    }
+                                    self.handle_readiness(addr)
                                 },
 
                                 ClientMessage::RequestCapture { capture_path } => {
@@ -313,7 +293,33 @@ impl Server {
         };
     }
 
+    fn handle_readiness(&mut self, addr: SocketAddr) {
+        self.state.ready_count += 1;
+        info!(
+            "{} signaled readiness. Currently ready: {}/{}",
+            addr, self.state.ready_count, self.settings.max_connections
+        );
+        self.connections.get_mut(&addr).expect("Couldn't get the identity of the ready player. I guess this should never happen so i'm panicking like a little bitch").identity.is_ready = true;
+
+        if self.state.ready_count == self.settings.max_connections {
+            info!("All players are ready! Changing state to ServerStage::Game");
+            self.state.stage = ServerStage::Game;
+            self.start_game();
+        }
+    }
+
     fn remove_client(&mut self, addr: SocketAddr) {
+        warn!("Removing: {:?} from connection list", addr);
+        let is_ready = &mut self.connections.get_mut(&addr).expect("Couldn't get the identity of disconnected player. I don't think i should panic but i don't care fuck you").identity.is_ready;
+
+        if *is_ready {
+            *is_ready = false;
+            self.state.ready_count -= 1;
+            info!(
+                "Currently {}/{} players are ready",
+                self.state.ready_count, self.settings.max_connections
+            );
+        }
         self.connections.remove(&addr);
     }
 }
