@@ -181,9 +181,17 @@ impl Client {
                             }
 
 
-                            ServerMessage::AvailableCaptures { captures } => todo!(),
-                            ServerMessage::AvailableMoves { moves } => todo!(),
-                            ServerMessage::GameEnd { result } => todo!(),
+                            ServerMessage::AvailableCaptures { captures } => {
+                                let _ = update_sender.send(ClientData::AvailableCaptures(captures)).await;
+                            },
+
+                            ServerMessage::AvailableMoves { moves } => {
+                                let _ = update_sender.send(ClientData::AvailableMoves(moves)).await;
+                            },
+
+                            ServerMessage::GameEnd { result } => {
+                                let _ = update_sender.send(ClientData::GameEnd(result)).await;
+                            },
                             }
                         } else {
                             error!("Connection broken!");
@@ -194,9 +202,17 @@ impl Client {
                     oldest_cmd = commands_receiver.recv() => {
                         if let Some(oldest_cmd) = oldest_cmd {
                             match oldest_cmd {
-                                ClientCommands::SendCapture(capture_path) => todo!(),
+                                ClientCommands::SendCapture(capture_path) => {
+                                    debug!("Sending capture path: {:?}", capture_path);
+                                    let msg = Message::new(ClientMessage::RequestCapture { capture_path });
+                                    send_message(msg, &conn_sender).await;
+                                },
 
-                                ClientCommands::SendMove { from, to } => todo!(),
+                                ClientCommands::SendMove { from, to } => {
+                                    debug!("Sending move from: {} to: {}", from, to);
+                                    let msg = Message::new(ClientMessage::RequestMove { from, to});
+                                    send_message(msg, &conn_sender).await;
+                                },
 
                                 ClientCommands::SendText(content) => {
                                     debug!("Seding text message: {}", content);

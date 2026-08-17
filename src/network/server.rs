@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::{
     logic::{
         board::{board_view::BoardView, pawn::CapturePath},
-        game_master::GameMaster,
+        game_master::{GameMaster, GameResult},
         math::position::Position,
     },
     network::{
@@ -335,11 +335,68 @@ impl Server {
 
     /* === Sending messages === */
 
-    /// Wrapper around broadcast_current_turn and broadcast_board_view. Should be used after every
-    /// players move
+    ///  Should be used after every players move
     async fn on_player_action(&mut self) {
         self.broadcast_board_view().await;
         self.broadcast_current_turn().await;
+
+        let Some(gm) = &self.game_master else {
+            error!("Game master not set while player made an action!");
+            return;
+        };
+
+        let captures = gm.get_current_player_captures();
+        let moves = gm.get_current_player_moves();
+        let current_player = gm.get_current_turn();
+
+        if let Some(result) = gm.get_game_result() {
+            info!("Game ended with result: {:?}", result);
+            self.handle_game_end(result).await;
+        }
+
+        if !captures.is_empty() {
+            debug!("Current captures: {:?}", captures);
+            self.send_player_captures(current_player, captures).await;
+            return;
+        }
+
+        if !moves.is_empty() {
+            debug!("Current moves: {:?}", moves);
+            self.send_player_moves(current_player, moves).await;
+            return;
+        }
+
+        panic!("on_player_action should never get here");
+    }
+
+    async fn send_player_captures(&mut self, current_player: Uuid, captures: Vec<CapturePath>) {
+        let Some(addr) = self.get_client_by_id(current_player) else {
+            error!("Could not get player connection, while sending him his captures!");
+            return;
+        };
+
+        let msg = Message::new(ServerMessage::AvailableCaptures { captures });
+        self.send_message(*addr, msg).await;
+    }
+
+    async fn send_player_moves(
+        &mut self,
+        current_player: Uuid,
+        moves: Vec<crate::logic::board::pawn::MovePath>,
+    ) {
+        let Some(addr) = self.get_client_by_id(current_player) else {
+            error!("Could not get player connection, while sending him his moves!");
+            return;
+        };
+
+        let msg = Message::new(ServerMessage::AvailableMoves { moves });
+        self.send_message(*addr, msg).await;
+    }
+
+    async fn handle_game_end(&mut self, result: GameResult) {
+        let msg = Message::new(ServerMessage::GameEnd { result });
+        self.broadcast_message(msg).await;
+        self.state.stage = ServerStage::End;
     }
 
     async fn broadcast_board_view(&mut self) {
@@ -396,7 +453,7 @@ impl Server {
         match msg {
             Ok(msg) => {
                 for identity in self.connections.values_mut() {
-                    identity.sender.send(msg.clone()).await;
+                    let _ = identity.sender.send(msg.clone()).await;
                 }
             }
             Err(e) => {
@@ -404,6 +461,13 @@ impl Server {
                 return;
             }
         }
+    }
+
+    fn get_client_by_id(&self, id: Uuid) -> Option<&SocketAddr> {
+        self.connections
+            .iter()
+            .find(|(_, indentity)| indentity.identity.id == id)
+            .map(|(addr, _)| addr)
     }
 
     fn remove_client(&mut self, addr: SocketAddr) {

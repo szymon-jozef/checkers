@@ -119,10 +119,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 Some(ClientData::AvailableCaptures(capture_paths)) => {
+                    info!("Available captures paths: {:?}", capture_paths);
                     todo!()
                 }
 
-                Some(ClientData::AvailableMoves(move_paths)) => todo!(),
+                Some(ClientData::AvailableMoves(move_paths)) => {
+                    info!("Available moves: {:?}", move_paths);
+                    todo!();
+                },
 
                 Some(ClientData::TextMessage {sender, content}) => {
                     info!("[{}] - {}", sender, content);
