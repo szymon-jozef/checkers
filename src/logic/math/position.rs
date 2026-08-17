@@ -2,10 +2,11 @@ use core::fmt;
 use std::ops::Sub;
 
 use log::{debug, trace};
+use serde::{Deserialize, Serialize};
 
 use crate::logic::math::vector::Vector2D;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 /// Position on the board. Consists of row and column. Should be treated like a point in space on
 /// unsigned grid.
 ///
@@ -31,7 +32,9 @@ impl Position {
         trace!("Adding row: {} + {} = {}", self.row, delta.row, new_row);
         trace!(
             "Adding column: {} + {} = {}",
-            self.column, delta.column, new_column
+            self.column,
+            delta.column,
+            new_column
         );
 
         Some(Position {

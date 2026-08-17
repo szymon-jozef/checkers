@@ -1,8 +1,10 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::logic::{board::pawn::Pawn, math::position::Position};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub struct Field {
     pub position: Position,
     pub pawn: Option<Pawn>,

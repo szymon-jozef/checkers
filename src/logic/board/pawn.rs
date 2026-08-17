@@ -1,16 +1,16 @@
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::logic::{math::position::Position, player::Player};
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub enum PawnState {
     Man,
     Dame,
-    Captured,
 }
 
 /// Basic pawn
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub struct Pawn {
     pub state: PawnState,
     pub owner: Uuid,
@@ -25,6 +25,7 @@ impl Pawn {
     }
 }
 
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct CapturePath {
     pub from: Position,
     pub steps: Vec<Position>,
@@ -39,7 +40,7 @@ impl CapturePath {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
 pub struct MovePath {
     pub from: Position,
     pub available_steps: Vec<Position>,

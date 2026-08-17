@@ -1,4 +1,4 @@
-mod board;
+pub mod board;
 pub mod game_master;
-mod math;
+pub mod math;
 mod player;

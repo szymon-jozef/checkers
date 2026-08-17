@@ -1,14 +1,18 @@
 use log::{info, warn};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::logic::{
     board::{
         board::Board,
+        board_view::BoardView,
         pawn::{CapturePath, MovePath},
     },
     math::position::Position,
     player::Player,
 };
 
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub enum GameResult {
     Lost(uuid::Uuid),
     Draw,
@@ -21,7 +25,7 @@ struct PlayerList {
 }
 
 impl PlayerList {
-    pub fn new(player1_name: String, player2_name: String) -> Self {
+    pub fn new(player1_name: &str, player2_name: &str) -> Self {
         PlayerList {
             players: [Player::new(player1_name), Player::new(player2_name)],
             current_turn: 0,
@@ -48,13 +52,30 @@ pub struct GameMaster {
 }
 
 impl GameMaster {
-    pub fn new(player1_name: String, player2_name: String) -> Self {
+    pub fn new(player1_name: &str, player2_name: &str) -> Self {
         let mut players: PlayerList = PlayerList::new(player1_name, player2_name);
         let [player1, player2] = &mut players.players;
 
         let board = Board::new(player1, player2, None);
 
         GameMaster { players, board }
+    }
+
+    pub fn get_players_names_and_ids(&self) -> Vec<(String, Uuid)> {
+        let mut result: Vec<(String, Uuid)> = vec![];
+        for player in &self.players.players {
+            result.push((player.name.clone(), player.id));
+        }
+
+        result
+    }
+
+    pub fn get_board_view(&self) -> BoardView {
+        BoardView::from(self.board.clone())
+    }
+
+    pub fn get_current_turn(&self) -> Uuid {
+        self.players.get_current_turn().id
     }
 
     pub fn get_current_player_captures(&self) -> Vec<CapturePath> {
@@ -165,7 +186,7 @@ mod tests {
     use rand::seq::IndexedRandom;
 
     fn run_game() {
-        let mut master: GameMaster = GameMaster::new("Morbius".to_string(), "Milo".to_string());
+        let mut master: GameMaster = GameMaster::new("Morbius", "Milo");
         let mut turns = 0;
         let max_turns = 2000;
 

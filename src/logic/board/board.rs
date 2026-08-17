@@ -11,6 +11,9 @@ use std::ops::{Index, IndexMut};
 
 use log::{debug, error, info, trace, warn};
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Board {
     board: Vec<Field>,
     pub size: usize,
@@ -67,6 +70,12 @@ impl Board {
             .collect();
 
         Board { board, size }
+    }
+
+    /// Returns the clone of the board inner vec. Meant for `BoardView`. This vec shouldn't be
+    /// manipulated by hand
+    pub fn get_board(&self) -> Vec<Field> {
+        self.board.clone()
     }
 
     /// For testing
@@ -524,8 +533,8 @@ mod tests {
     fn new_board_test() {
         init_logger();
 
-        let mut player1: Player = Player::new("Morbius".to_string());
-        let mut player2: Player = Player::new("Milo".to_string());
+        let mut player1: Player = Player::new("Morbius");
+        let mut player2: Player = Player::new("Milo");
 
         let test_board: Board = Board::new(&mut player1, &mut player2, None);
         let size: usize = test_board.size;
@@ -572,8 +581,8 @@ mod tests {
     fn test_overloaded_operators() {
         init_logger();
 
-        let mut player1: Player = Player::new("Morbius".to_string());
-        let mut player2: Player = Player::new("Milo".to_string());
+        let mut player1: Player = Player::new("Morbius");
+        let mut player2: Player = Player::new("Milo");
 
         let test_board: Board = Board::new(&mut player1, &mut player2, None);
 
@@ -604,8 +613,8 @@ mod tests {
     fn test_moving_pawn() {
         init_logger();
 
-        let mut player1: Player = Player::new("Morbius".to_string());
-        let mut player2: Player = Player::new("Milo".to_string());
+        let mut player1: Player = Player::new("Morbius");
+        let mut player2: Player = Player::new("Milo");
 
         let mut test_board: Board = Board::new(&mut player1, &mut player2, None);
 
@@ -639,8 +648,8 @@ mod tests {
     fn test_getting_pawn_moves() {
         init_logger();
 
-        let mut p1: Player = Player::new("Morbius".to_string());
-        let mut p2: Player = Player::new("Milo".to_string());
+        let mut p1: Player = Player::new("Morbius");
+        let mut p2: Player = Player::new("Milo");
 
         let mut board: Board = Board::new_empty(&mut p1, &mut p2, None);
 
@@ -673,8 +682,8 @@ mod tests {
     fn test_getting_player_pawns_positions() {
         init_logger();
 
-        let mut p1: Player = Player::new("Morbius".to_string());
-        let mut p2: Player = Player::new("Milo".to_string());
+        let mut p1: Player = Player::new("Morbius");
+        let mut p2: Player = Player::new("Milo");
         let test_board: Board = Board::new(&mut p1, &mut p2, None);
 
         let expected_positions: Vec<Position> = (0..test_board.size)
@@ -704,8 +713,8 @@ mod tests {
     fn test_is_movable() {
         init_logger();
 
-        let mut p1: Player = Player::new("Morbius".to_string());
-        let mut p2: Player = Player::new("Milo".to_string());
+        let mut p1: Player = Player::new("Morbius");
+        let mut p2: Player = Player::new("Milo");
         let test_board: Board = Board::new(&mut p1, &mut p2, None);
 
         assert!(test_board.is_pawn_movable(Position { row: 2, column: 1 }, &p1));
@@ -723,8 +732,8 @@ mod tests {
     fn test_getting_captures_path() {
         init_logger();
 
-        let mut p1 = Player::new("Morbius".to_string());
-        let mut p2 = Player::new("Milo".to_string());
+        let mut p1 = Player::new("Morbius");
+        let mut p2 = Player::new("Milo");
 
         let mut board = Board::new_empty(&mut p1, &mut p2, None);
 
@@ -755,8 +764,8 @@ mod tests {
     fn test_capturing() {
         init_logger();
 
-        let mut p1 = Player::new("Morbius".to_string());
-        let mut p2 = Player::new("Milo".to_string());
+        let mut p1 = Player::new("Morbius");
+        let mut p2 = Player::new("Milo");
 
         let mut board = Board::new_empty(&mut p1, &mut p2, None);
 
