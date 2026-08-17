@@ -1,13 +1,21 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 
 use crate::network::message::{Message, ServerMessage};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, Debug)]
 pub struct NetworkIdentity {
     pub name: String,
     pub id: uuid::Uuid,
     pub is_ready: bool,
+}
+
+impl Display for NetworkIdentity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(Name: {}, id: {})", self.name, self.id)
+    }
 }
 
 impl Default for NetworkIdentity {

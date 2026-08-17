@@ -7,9 +7,14 @@ use tokio::{
     net::TcpListener,
     sync::mpsc::{Receiver, Sender},
 };
+use uuid::Uuid;
 
 use crate::{
-    logic::{board::pawn::CapturePath, game_master::GameMaster, math::position::Position},
+    logic::{
+        board::{board_view::BoardView, pawn::CapturePath},
+        game_master::GameMaster,
+        math::position::Position,
+    },
     network::{
         connection::{Connection, ConnectionType},
         message::{
@@ -83,7 +88,7 @@ impl Server {
                     .expect("Could not start the server"),
             ), // TODO! Handle this nicely, as this will
             // crash gui app
-            connections: HashMap::new(),
+            connections: HashMap::with_capacity(2),
             sender,
             reciever,
             welcoming_reciever: None,
@@ -186,7 +191,7 @@ impl Server {
                                 },
 
                                 ClientMessage::SignalReadiness => {
-                                    self.handle_readiness(addr)
+                                    self.handle_readiness(addr).await
                                 },
 
                                 ClientMessage::RequestCapture { capture_path } => {
@@ -210,8 +215,48 @@ impl Server {
         }
     }
 
-    fn start_game(&self) {
-        todo!();
+    async fn start_game(&mut self) {
+        info!("Starting the game!");
+        let mut names: Vec<String> = vec![];
+        for networkidentity in self.connections.values() {
+            if networkidentity.identity.is_ready {
+                names.push(networkidentity.identity.name.clone());
+            }
+        }
+
+        if names.len() != self.settings.max_connections {
+            error!("Tried starting the game, but could not gather enough ready player names");
+            return;
+        }
+
+        let game_master = GameMaster::new(&names[0], &names[1]);
+
+        let names_and_ids: Vec<(String, Uuid)> = game_master.get_players_names_and_ids();
+        let board_view: BoardView = game_master.get_board_view();
+
+        let mut msgs: Vec<(SocketAddr, Result<Message<ServerMessage>, postcard::Error>)> = vec![];
+
+        for (name, id) in names_and_ids {
+            for (addr, networkidentity) in self.connections.iter_mut() {
+                if networkidentity.identity.name == name {
+                    networkidentity.identity.id = id;
+
+                    msgs.push((
+                        *addr,
+                        Message::new(ServerMessage::GameStart {
+                            identity: networkidentity.identity.clone(),
+                            board_view: board_view.clone(),
+                        }),
+                    ));
+                }
+            }
+        }
+
+        for (addr, msg) in msgs {
+            self.send_message(addr, msg).await;
+        }
+
+        self.game_master = Some(game_master);
     }
 
     /* ======= Processing messages :D helper functions ======== */
@@ -293,7 +338,7 @@ impl Server {
         };
     }
 
-    fn handle_readiness(&mut self, addr: SocketAddr) {
+    async fn handle_readiness(&mut self, addr: SocketAddr) {
         self.state.ready_count += 1;
         info!(
             "{} signaled readiness. Currently ready: {}/{}",
@@ -304,7 +349,7 @@ impl Server {
         if self.state.ready_count == self.settings.max_connections {
             info!("All players are ready! Changing state to ServerStage::Game");
             self.state.stage = ServerStage::Game;
-            self.start_game();
+            self.start_game().await;
         }
     }
 

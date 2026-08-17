@@ -3,13 +3,17 @@ use std::net::SocketAddr;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use uuid::Uuid;
 
-use crate::logic::{
-    board::{
-        board::Board,
-        pawn::{CapturePath, MovePath},
+use crate::{
+    logic::{
+        board::{
+            board::Board,
+            board_view::BoardView,
+            pawn::{CapturePath, MovePath},
+        },
+        game_master::GameResult,
+        math::position::Position,
     },
-    game_master::GameResult,
-    math::position::Position,
+    network::network_identity::NetworkIdentity,
 };
 
 use postcard::{from_bytes, to_allocvec};
@@ -38,15 +42,32 @@ where
 pub enum ServerMessage {
     RequestHandshake,
     AcceptHandshake,
-    DeclineHandshake { reason: String },
+    DeclineHandshake {
+        reason: String,
+    },
 
-    AvailableCaptures { captures: Vec<CapturePath> },
-    AvailableMoves { moves: Vec<MovePath> },
+    GameStart {
+        identity: NetworkIdentity,
+        board_view: BoardView,
+    },
 
-    BroadcastBoardState { board: Board },
-    BroadcastCurrentTurn { active_player: Uuid },
+    AvailableCaptures {
+        captures: Vec<CapturePath>,
+    },
+    AvailableMoves {
+        moves: Vec<MovePath>,
+    },
 
-    GameEnd { result: GameResult },
+    BroadcastBoardState {
+        board: Board,
+    },
+    BroadcastCurrentTurn {
+        active_player: Uuid,
+    },
+
+    GameEnd {
+        result: GameResult,
+    },
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]

@@ -3,11 +3,15 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use log::{debug, error, info};
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
-use crate::network::{
-    connection::{Connection, ConnectionType},
-    message::{
-        ClientMessage::{self, SignalReadiness, TextMessage},
-        Message, ServerMessage,
+use crate::{
+    logic::board::board_view::BoardView,
+    network::{
+        connection::{Connection, ConnectionType},
+        message::{
+            ClientMessage::{self, SignalReadiness, TextMessage},
+            Message, ServerMessage,
+        },
+        network_identity::NetworkIdentity,
     },
 };
 
@@ -21,6 +25,10 @@ pub struct Client {
     conn_reciever_incoming: Option<Receiver<(SocketAddr, Message<ServerMessage>)>>,
     conn_sender_outgoing: Sender<Message<ClientMessage>>,
     settings: ClientSettings,
+
+    identity: Option<NetworkIdentity>,
+    board_view: Option<BoardView>,
+    update_reciever: Option<Receiver<Message<ServerMessage>>>,
 }
 
 impl Client {
@@ -51,6 +59,9 @@ impl Client {
             conn_reciever_incoming: Some(conn_reciever),
             conn_sender_outgoing,
             settings,
+            identity: None,
+            board_view: None,
+            update_reciever: None,
         })
     }
 
@@ -63,6 +74,9 @@ impl Client {
         let sender = self.conn_sender_outgoing.clone();
 
         let settings = self.settings.clone();
+
+        let (update_sender, update_reciever) = mpsc::channel::<Message<ServerMessage>>(1024);
+        self.update_reciever = Some(update_reciever);
 
         tokio::spawn(async move {
             loop {
@@ -79,13 +93,28 @@ impl Client {
 
                             let _ = sender.send(msg.unwrap()).await;
                         }
+
                         ServerMessage::AcceptHandshake => {
                             info!("Server accepted us! Yay :D");
                         }
+
                         ServerMessage::DeclineHandshake { reason } => {
                             error!("Server declined connection: {}", reason);
                             break;
                         }
+
+                        ServerMessage::GameStart {
+                            identity,
+                            board_view,
+                        } => {
+                            info!("Server started the game!");
+                            info!("Our identity is: {}", identity);
+                            /*
+                            self.board_view = Some(board_view);
+                            self.identity = Some(identity);
+                            */
+                        }
+
                         ServerMessage::AvailableCaptures { captures } => todo!(),
                         ServerMessage::AvailableMoves { moves } => todo!(),
                         ServerMessage::BroadcastBoardState { board } => todo!(),

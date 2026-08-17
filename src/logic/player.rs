@@ -12,9 +12,9 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: &str) -> Self {
         Player {
-            name,
+            name: name.to_string(),
             id: Uuid::new_v4(),
             end_row: None,
             vertical_direction: None,
