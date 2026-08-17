@@ -337,36 +337,39 @@ impl Server {
 
     ///  Should be used after every players move
     async fn on_player_action(&mut self) {
-        self.broadcast_board_view().await;
-        self.broadcast_current_turn().await;
+        if self.state.stage == ServerStage::Game {
+            self.broadcast_board_view().await;
+            self.broadcast_current_turn().await;
 
-        let Some(gm) = &self.game_master else {
-            error!("Game master not set while player made an action!");
-            return;
-        };
+            let Some(gm) = &self.game_master else {
+                error!("Game master not set while player made an action!");
+                return;
+            };
 
-        let captures = gm.get_current_player_captures();
-        let moves = gm.get_current_player_moves();
-        let current_player = gm.get_current_turn();
+            let captures = gm.get_current_player_captures();
+            let moves = gm.get_current_player_moves();
+            let current_player = gm.get_current_turn();
 
-        if let Some(result) = gm.get_game_result() {
-            info!("Game ended with result: {:?}", result);
-            self.handle_game_end(result).await;
+            if let Some(result) = gm.get_game_result() {
+                info!("Game ended with result: {:?}", result);
+                self.handle_game_end(result).await;
+                return;
+            }
+
+            if !captures.is_empty() {
+                debug!("Current captures: {:?}", captures);
+                self.send_player_captures(current_player, captures).await;
+                return;
+            }
+
+            if !moves.is_empty() {
+                debug!("Current moves: {:?}", moves);
+                self.send_player_moves(current_player, moves).await;
+                return;
+            }
+
+            panic!("on_player_action should never get here");
         }
-
-        if !captures.is_empty() {
-            debug!("Current captures: {:?}", captures);
-            self.send_player_captures(current_player, captures).await;
-            return;
-        }
-
-        if !moves.is_empty() {
-            debug!("Current moves: {:?}", moves);
-            self.send_player_moves(current_player, moves).await;
-            return;
-        }
-
-        panic!("on_player_action should never get here");
     }
 
     async fn send_player_captures(&mut self, current_player: Uuid, captures: Vec<CapturePath>) {
