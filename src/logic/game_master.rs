@@ -74,6 +74,10 @@ impl GameMaster {
         BoardView::from(self.board.clone())
     }
 
+    pub fn get_current_turn(&self) -> Uuid {
+        self.players.get_current_turn().id
+    }
+
     pub fn get_current_player_captures(&self) -> Vec<CapturePath> {
         self.board
             .get_player_pawns_positions(self.players.get_current_turn())

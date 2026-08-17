@@ -2,6 +2,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use log::{debug, error, info, warn};
 use tokio::sync::mpsc::{self, Receiver, Sender};
+use uuid::Uuid;
 
 use crate::{
     logic::{
@@ -42,10 +43,15 @@ pub enum ClientData {
         identity: NetworkIdentity,
         board_view: BoardView,
     },
+    GameEnd(GameResult),
+
     AvailableCaptures(Vec<CapturePath>),
     AvailableMoves(Vec<MovePath>),
+
+    BoardView(BoardView),
+    CurrentTurn(Uuid),
+
     TextMessage(String),
-    GameEnd(GameResult),
 }
 
 pub struct Client {
@@ -169,8 +175,12 @@ impl Client {
 
                             ServerMessage::AvailableCaptures { captures } => todo!(),
                             ServerMessage::AvailableMoves { moves } => todo!(),
-                            ServerMessage::BroadcastBoardState { board } => todo!(),
-                            ServerMessage::BroadcastCurrentTurn { active_player } => todo!(),
+                            ServerMessage::BroadcastBoardState { board } => {
+                                let _ = update_sender.send(ClientData::BoardView(board)).await;
+                            },
+                            ServerMessage::BroadcastCurrentTurn { active_player } => {
+                                let _ = update_sender.send(ClientData::CurrentTurn(active_player)).await;
+                            },
                             ServerMessage::GameEnd { result } => todo!(),
                             }
                         } else {

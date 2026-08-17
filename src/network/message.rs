@@ -51,8 +51,6 @@ pub enum ServerMessage {
         board_view: BoardView,
     },
 
-    BoardState(BoardView),
-
     AvailableCaptures {
         captures: Vec<CapturePath>,
     },
@@ -61,8 +59,9 @@ pub enum ServerMessage {
     },
 
     BroadcastBoardState {
-        board: Board,
+        board: BoardView,
     },
+
     BroadcastCurrentTurn {
         active_player: Uuid,
     },

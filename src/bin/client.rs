@@ -3,9 +3,13 @@ use std::{
     io::{self, Write},
 };
 
-use checkers::network::client::Client;
+use checkers::network::{
+    client::{Client, ClientData},
+    network_identity::NetworkIdentity,
+};
 use log::{debug, error, info, warn};
 use tokio::sync::mpsc;
+use uuid::Uuid;
 
 const QUIT_COMMAND: &str = "/quit";
 const HELP_COMMAND: &str = "/help";
@@ -58,6 +62,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (stdin_sender, mut stdin_receiver) = mpsc::channel(1024);
 
+    let mut indentity: Option<NetworkIdentity> = None;
+    let mut is_my_turn: bool = false;
+
     tokio::task::spawn_blocking(move || {
         let stdin = std::io::stdin();
 
@@ -87,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tokio::select! {
         msg = client_receiver.recv() => {
             match msg {
-                Some(checkers::network::client::ClientData::GameStart {
+                Some(ClientData::GameStart {
                     identity,
                     board_view,
                 }) => {
@@ -95,20 +102,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "Got new identity: {} and board_view. Game is about to start!",
                         identity
                     );
-                    println!("{}", board_view.to_string(identity.id));
+                    println!("{}", board_view.to_string(&identity.id));
+                    indentity = Some(identity);
                 }
 
-                Some(checkers::network::client::ClientData::AvailableCaptures(capture_paths)) => {
+                Some(ClientData::BoardView(view)) => {
+                    info!("New board state:\n{}", view.to_string(&indentity.as_ref().unwrap().id));
+
+                }
+
+                Some(ClientData::CurrentTurn(current_turn)) => {
+                    is_my_turn = current_turn == indentity.as_ref().expect("Server sent us new current turn without telling us who we are!").id;
+                    if is_my_turn {
+                        info!("It's our turn!");
+                    } else {
+                        info!("It's the turn of our enemy!");
+                    }
+                }
+
+                Some(ClientData::AvailableCaptures(capture_paths)) => {
                     todo!()
                 }
 
-                Some(checkers::network::client::ClientData::AvailableMoves(move_paths)) => todo!(),
+                Some(ClientData::AvailableMoves(move_paths)) => todo!(),
 
-                Some(checkers::network::client::ClientData::TextMessage(content)) => {
+                Some(ClientData::TextMessage(content)) => {
                     info!("Got message from the server: {}", content);
                 }
 
-                Some(checkers::network::client::ClientData::GameEnd(game_result)) => {
+                Some(ClientData::GameEnd(game_result)) => {
                     info!("Game has ended with the result: {:?}", game_result);
                 }
 

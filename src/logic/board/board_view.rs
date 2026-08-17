@@ -32,21 +32,21 @@ impl Index<usize> for BoardView {
 }
 
 impl BoardView {
-    pub fn to_string(&self, owner: Uuid) -> String {
+    pub fn to_string(&self, owner: &Uuid) -> String {
         (0..self.size)
             .map(move |row| {
                 (0..self.size)
                     .map(move |column| match &self[row][column].pawn {
                         Some(pawn) => match pawn.state {
                             super::pawn::PawnState::Man => {
-                                if pawn.owner == owner {
+                                if pawn.owner == *owner {
                                     'm'
                                 } else {
                                     'M'
                                 }
                             }
                             super::pawn::PawnState::Dame => {
-                                if pawn.owner == owner {
+                                if pawn.owner == *owner {
                                     'd'
                                 } else {
                                     'D'

@@ -257,6 +257,7 @@ impl Server {
         }
 
         self.game_master = Some(game_master);
+        self.on_player_action().await;
     }
 
     /* ======= Processing messages :D helper functions ======== */
@@ -290,20 +291,22 @@ impl Server {
         identity.identity.name = fixed_name
     }
 
-    fn process_capture(&mut self, capture_path: CapturePath) {
+    async fn process_capture(&mut self, capture_path: CapturePath) {
         if let Some(gm) = self.game_master.as_mut() {
             if gm.capture(&capture_path) {
                 debug!("Capture valid!");
+                self.on_player_action().await;
             } else {
                 debug!("Invalid capture!");
             }
         }
     }
 
-    fn process_move(&mut self, from: Position, to: Position) {
+    async fn process_move(&mut self, from: Position, to: Position) {
         if let Some(gm) = self.game_master.as_mut() {
             if gm.move_pawn(from, to) {
                 debug!("Move was valid!");
+                self.on_player_action().await;
             } else {
                 debug!("Move was invalid!");
             }
@@ -327,6 +330,37 @@ impl Server {
             info!("All players are ready! Changing state to ServerStage::Game");
             self.state.stage = ServerStage::Game;
             self.start_game().await;
+        }
+    }
+
+    /* === Sending messages === */
+
+    /// Wrapper around broadcast_current_turn and broadcast_board_view. Should be used after every
+    /// players move
+    async fn on_player_action(&mut self) {
+        self.broadcast_board_view().await;
+        self.broadcast_current_turn().await;
+    }
+
+    async fn broadcast_board_view(&mut self) {
+        if let Some(gm) = &self.game_master {
+            let msg = Message::new(ServerMessage::BroadcastBoardState {
+                board: gm.get_board_view(),
+            });
+            self.broadcast_message(msg).await;
+        } else {
+            error!("Cannot broadcast board view as game manager is not set!");
+        }
+    }
+
+    async fn broadcast_current_turn(&mut self) {
+        if let Some(gm) = &self.game_master {
+            let msg = Message::new(ServerMessage::BroadcastCurrentTurn {
+                active_player: gm.get_current_turn(),
+            });
+            self.broadcast_message(msg).await;
+        } else {
+            error!("Cannot broadcast current turn as game master doesn't exists!!!!!!!!!");
         }
     }
 
