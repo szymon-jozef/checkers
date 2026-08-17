@@ -7,7 +7,6 @@ use crate::logic::{math::position::Position, player::Player};
 pub enum PawnState {
     Man,
     Dame,
-    Captured,
 }
 
 /// Basic pawn

@@ -85,6 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "Got new identity: {} and board_view. Game is about to start!",
                     identity
                 );
+                println!("{}", board_view.to_string(identity.id));
             }
 
             Ok(checkers::network::client::ClientData::AvailableCaptures(capture_paths)) => {
