@@ -237,6 +237,24 @@ impl Client {
         });
     }
 
+    pub async fn send_capture(&mut self, capture: CapturePath) {
+        debug!("Requesting sending capture: {:?}", capture);
+        if let Some(sender) = &self.commands_sender {
+            let _ = sender.send(ClientCommands::SendCapture(capture)).await;
+        } else {
+            error!("Command sender not set!");
+        }
+    }
+
+    pub async fn send_move(&mut self, from: Position, to: Position) {
+        debug!("Requested sending move from: {} to: {}", from, to);
+        if let Some(sender) = &self.commands_sender {
+            let _ = sender.send(ClientCommands::SendMove { from, to }).await;
+        } else {
+            error!("Command sender not set!");
+        }
+    }
+
     pub async fn send_text_message(&mut self, content: String) {
         if let Some(sender) = &self.commands_sender {
             let _ = sender.send(ClientCommands::SendText(content)).await;
