@@ -1,0 +1,38 @@
+name: Unit and style tests
+
+concurrency: # don't run the test when there's is a newer version
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Test dev build
+        run: cargo test
+
+      - name: Test release build
+        run: cargo test --release
+
+  style-checks:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy check
+        run: cargo clippy # -- -D
+                          # TODO! Uncomment this when code will be alright
+      - name: Format check
+        run: cargo fmt -- --check

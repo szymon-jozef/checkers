@@ -3,6 +3,7 @@
     devShells.default = pkgs.mkShell {
       packages = with pkgs; [
         rustfmt
+        clippy
       ];
 
       RUST_LOG = "debug";

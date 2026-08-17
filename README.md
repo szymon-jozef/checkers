@@ -1,3 +1,5 @@
+![Tests status](https://github.com/szymon-jozef/checkers/actions/workflows/tests.yml/badge.svg)
+
 # Game of checkers online
 
 Currently WIP
