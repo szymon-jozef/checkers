@@ -50,8 +50,9 @@ pub enum ServerMessage {
     AvailableMoves { moves: Vec<MovePath> },
 
     BroadcastBoardState { board: BoardView },
-
     BroadcastCurrentTurn { active_player: Uuid },
+
+    BroadCastTextMessage { sender: String, content: String },
 
     GameEnd { result: GameResult },
 }

@@ -204,6 +204,8 @@ impl Server {
 
                                 ClientMessage::TextMessage (content) => {
                                     info!("{} sent us a message: {}", addr, content);
+                                    let sender = self.connections[&addr].identity.name.clone();
+                                    self.broadcast_text_message(sender, content).await;
                                 }
                             }
                  } else {
@@ -360,6 +362,11 @@ impl Server {
         } else {
             error!("Cannot broadcast current turn as game master doesn't exists!!!!!!!!!");
         }
+    }
+
+    async fn broadcast_text_message(&mut self, sender: String, content: String) {
+        let msg = Message::new(ServerMessage::BroadCastTextMessage { sender, content });
+        self.broadcast_message(msg).await;
     }
 
     /* === Helper methods === */

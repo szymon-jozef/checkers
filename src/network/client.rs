@@ -48,7 +48,7 @@ pub enum ClientData {
     BoardView(BoardView),
     CurrentTurn(Uuid),
 
-    TextMessage(String),
+    TextMessage { sender: String, content: String },
 }
 
 pub struct Client {
@@ -66,7 +66,7 @@ impl Client {
     pub async fn new() -> Option<Client> {
         let settings = ClientSettings {
             server_url: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6767),
-            name: "Szymon".into(),
+            name: "Morbius".into(),
         };
 
         let (conn_sender, conn_reciever) =
@@ -169,14 +169,20 @@ impl Client {
                                 let _ = update_sender.send(ClientData::GameStart { identity }).await;
                             }
 
-                            ServerMessage::AvailableCaptures { captures } => todo!(),
-                            ServerMessage::AvailableMoves { moves } => todo!(),
-                            ServerMessage::BroadcastBoardState { board } => {
-                                let _ = update_sender.send(ClientData::BoardView(board)).await;
-                            },
                             ServerMessage::BroadcastCurrentTurn { active_player } => {
                                 let _ = update_sender.send(ClientData::CurrentTurn(active_player)).await;
                             },
+                            ServerMessage::BroadcastBoardState { board } => {
+                                let _ = update_sender.send(ClientData::BoardView(board)).await;
+                            },
+
+                            ServerMessage::BroadCastTextMessage {sender, content} => {
+                                let _ = update_sender.send(ClientData::TextMessage {sender, content}).await;
+                            }
+
+
+                            ServerMessage::AvailableCaptures { captures } => todo!(),
+                            ServerMessage::AvailableMoves { moves } => todo!(),
                             ServerMessage::GameEnd { result } => todo!(),
                             }
                         } else {

@@ -124,8 +124,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 Some(ClientData::AvailableMoves(move_paths)) => todo!(),
 
-                Some(ClientData::TextMessage(content)) => {
-                    info!("Got message from the server: {}", content);
+                Some(ClientData::TextMessage {sender, content}) => {
+                    info!("[{}] - {}", sender, content);
                 }
 
                 Some(ClientData::GameEnd(game_result)) => {
