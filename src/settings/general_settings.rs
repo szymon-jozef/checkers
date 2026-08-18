@@ -1,8 +1,13 @@
 use core::error;
-use std::path::PathBuf;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::PathBuf,
+};
 
 use log::warn;
 use serde::{Serialize, de::DeserializeOwned};
+
+pub const DEFAULT_URL: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6767);
 
 // maybe consider some better name for this
 pub trait SettingsLike: Serialize + DeserializeOwned + Default {
@@ -31,6 +36,8 @@ pub trait SettingsLike: Serialize + DeserializeOwned + Default {
         Ok(toml::from_slice(&std::fs::read(Self::get_file_path()?)?)?) // i love rust
     }
 
+    /// Try to create new instance of `Self` with values from config file. If there is no content
+    /// defaults to Self::default. If config file is invalid overwrites it with default values
     fn new() -> Self {
         match Self::read_from_file() {
             Ok(settings) => return settings,

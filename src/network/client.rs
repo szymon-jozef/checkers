@@ -21,13 +21,8 @@ use crate::{
         },
         network_identity::NetworkIdentity,
     },
+    settings::{client_settings::ClientSettings, general_settings::SettingsLike},
 };
-
-#[derive(Clone)]
-pub struct ClientSettings {
-    server_url: SocketAddr,
-    name: String,
-}
 
 pub enum ClientCommands {
     SendCapture(CapturePath),
@@ -64,10 +59,7 @@ pub struct Client {
 
 impl Client {
     pub async fn new() -> Option<Client> {
-        let settings = ClientSettings {
-            server_url: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6767),
-            name: "Morbius".into(),
-        };
+        let settings = ClientSettings::new();
 
         let (conn_sender, conn_reciever) =
             mpsc::channel::<(SocketAddr, Message<ServerMessage>)>(1024);
