@@ -7,8 +7,13 @@ concurrency: # don't run the test when there's is a newer version
 on:
   push:
     branches: [ master ]
+    paths:
+      - "**.rs"
+
   pull_request:
     branches: [ master ]
+    paths:
+      - "**.rs"
 
 jobs:
   unit-tests:
