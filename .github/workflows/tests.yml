@@ -1,5 +1,20 @@
 name: Unit and style tests
 
+permissions:
+  actions: none
+  checks: read
+  contents: read
+  deployments: none
+  id-token: read
+  issues: none
+  discussions: none
+  packages: none
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 concurrency: # don't run the test when there's is a newer version
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
