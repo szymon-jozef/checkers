@@ -5,12 +5,9 @@ use std::{
 
 use checkers::{
     logic::board::pawn::{CapturePath, MovePath},
-    network::{
-        client::{Client, ClientData},
-        network_identity::NetworkIdentity,
-    },
+    network::{client::Client, message::ServerMessage, network_identity::NetworkIdentity},
 };
-use log::{error, info, warn};
+use log::{error, warn};
 use tokio::sync::mpsc;
 
 const QUIT_COMMAND: &str = "/quit";
@@ -86,9 +83,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     };
 
-    let (client_sender, mut client_receiver) = mpsc::channel(1024);
-
-    client.set_update_sender(client_sender);
     client.update();
 
     let (stdin_sender, mut stdin_receiver) = mpsc::channel(1024);
@@ -108,6 +102,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let mut client_receiver = client
+        .get_update_receiver()
+        .expect("Could not get update receiver from the network client");
+
     let help_msg: String = format!(
         "\n┌────Help────────────────────────────
 │\t {} - quit                        
@@ -122,61 +120,64 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         QUIT_COMMAND, HELP_COMMAND, READY_COMMAND, SEND_COMMAND, CAPTURE_COMMAND, MOVE_COMMAND
     );
 
-    info!("───────Type /help for help───────");
+    println!("───────Type /help for help───────");
     loop {
         tokio::select! {
         msg = client_receiver.recv() => {
             match msg {
-                Some(ClientData::GameStart {
+                Some(ServerMessage::GameStart {
                     identity,
                 }) => {
-                    info!(
+                    println!(
                         "Got new identity: {}",
                         identity
                     );
                     context.identity = Some(identity);
                 }
 
-                Some(ClientData::BoardView(view)) => {
-                    info!("New board state:\n{}", view.to_string(&context.identity.as_ref().unwrap().id));
-
+                Some(ServerMessage::BroadcastBoardState{board}) => {
+                    println!("New board state:\n{}", board.to_string(&context.identity.as_ref().unwrap().id));
                 }
 
-                Some(ClientData::CurrentTurn(current_turn)) => {
-                    context.is_my_turn = current_turn == context.identity.as_ref().expect("Server sent us new current turn without telling us who we are!").id;
+                Some(ServerMessage::BroadcastCurrentTurn{active_player}) => {
+                    context.is_my_turn = active_player == context.identity.as_ref().expect("Server sent us new current turn without telling us who we are!").id;
                     if context.is_my_turn {
-                        info!("It's our turn!");
+                        println!("It's our turn!");
                     } else {
-                        info!("It's the turn of our enemy!");
+                        println!("It's the turn of our enemy!");
                     }
                 }
 
-                Some(ClientData::AvailableCaptures(capture_paths)) => {
-                    info!("Available captures paths: {:?}", capture_paths);
+                Some(ServerMessage::AvailableCaptures{captures}) => {
+                    println!("Available captures paths: {:?}", captures);
                     context.available_moves = None;
-                    context.available_captures = Some(capture_paths);
+                    context.available_captures = Some(captures);
                 }
 
-                Some(ClientData::AvailableMoves(move_paths)) => {
-                    info!("Available moves: {:?}", move_paths);
-                    context.available_moves = Some(move_paths);
+                Some(ServerMessage::AvailableMoves{moves}) => {
+                    println!("Available moves: {:?}", moves);
+                    context.available_moves = Some(moves);
                     context.available_captures = None;
                 },
 
-                Some(ClientData::TextMessage {sender, content}) => {
-                    info!("[{}] - {}", sender, content);
+                Some(ServerMessage::BroadCastTextMessage {sender, content}) => {
+                    println!("[{}] - {}", sender, content);
                 }
 
-                Some(ClientData::GameEnd(game_result)) => {
-                    info!("Game has ended with the result: {:?}", game_result);
+                Some(ServerMessage::GameEnd{result}) => {
+                    println!("Game has ended with the result: {:?}", result);
                 }
+
+                Some(_) => {
+                    error!("This shouldn't happen");
+                } // ignore messages already handled by the network client
 
                 None => {
                     warn!("Connection broken! Stopping");
                     break Ok(());
                 }
             }
-            }
+        }
 
         buffer_opt = stdin_receiver.recv() => {
             if let Some(mut buffer) = buffer_opt {
@@ -189,11 +190,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     match CliCommands::try_from(cmd) {
                         Ok(cmd) => match cmd {
                             CliCommands::Quit => {
-                                info!("Bye bye");
+                                println!("Bye bye");
                                 std::process::exit(0);
                             }
                             CliCommands::Help => {
-                                info!("{}", help_msg);
+                                println!("{}", help_msg);
                             }
                             CliCommands::Ready => {
                                 client.signal_readiness().await;
