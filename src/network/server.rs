@@ -1,8 +1,5 @@
 use log::{debug, error, info, warn};
-use std::{
-    collections::HashMap,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-};
+use std::{collections::HashMap, net::SocketAddr};
 use tokio::{
     net::TcpListener,
     sync::mpsc::{Receiver, Sender},
@@ -23,14 +20,15 @@ use crate::{
         },
         network_identity::NetworkServerIdentity,
     },
+    settings::{general_settings::SettingsLike, server_settings::ServerSettings},
 };
 
-// TODO! More settings!
-pub struct ServerSettings {
-    pub addr: SocketAddr,
-    pub max_connections: usize,
-    pub allow_spectators: bool,
-}
+// TODO! Maybe move this somewhere more global and share with `board` struct
+const MAX_PLAYABLE_CONNECTIONS: usize = 2; // DON'T EVER CHANGE THIS AS GAME OF CHECKERS HAS ONLY TWO PLAYERS, U
+// UNDERSTAND????
+//
+// There will be a spectator mode, hence the name __PLAYABLE__ connection. You will be able to have
+// more connections, but they won't be able to play
 
 #[derive(PartialEq)]
 enum ServerStage {
@@ -71,11 +69,7 @@ pub struct Server {
 impl Server {
     pub async fn new() -> Server {
         // TODO! Should be read from a file
-        let settings = ServerSettings {
-            addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 6767),
-            max_connections: 2,
-            allow_spectators: false,
-        };
+        let settings = ServerSettings::new();
 
         let (sender, reciever) =
             tokio::sync::mpsc::channel::<(SocketAddr, Message<ClientMessage>)>(1024); // random
@@ -153,7 +147,7 @@ impl Server {
             tokio::select! {
                 new_client_opt = self.welcoming_reciever.as_mut().expect("Welcoming reciever was not set. Was the server started?").recv() => {
                     if let Some((addr, sender)) = new_client_opt {
-                        if self.state.stage == ServerStage::Lobby && self.connections.keys().len() < self.settings.max_connections && !self.settings.allow_spectators {
+                        if self.state.stage == ServerStage::Lobby && self.connections.keys().len() < MAX_PLAYABLE_CONNECTIONS && !self.settings.allow_spectators {
                             let identity = NetworkServerIdentity::new(sender);
                             self.connections.insert(addr, identity);
                             self.request_handshake(addr).await;
@@ -226,7 +220,7 @@ impl Server {
             }
         }
 
-        if names.len() != self.settings.max_connections {
+        if names.len() != MAX_PLAYABLE_CONNECTIONS {
             error!("Tried starting the game, but could not gather enough ready player names");
             return;
         }
@@ -322,11 +316,11 @@ impl Server {
         self.state.ready_count += 1;
         info!(
             "{} signaled readiness. Currently ready: {}/{}",
-            addr, self.state.ready_count, self.settings.max_connections
+            addr, self.state.ready_count, MAX_PLAYABLE_CONNECTIONS
         );
         self.connections.get_mut(&addr).expect("Couldn't get the identity of the ready player. I guess this should never happen so i'm panicking like a little bitch").identity.is_ready = true; // TODO! This sometimes happens for some reason (when there is a game going, both player leave and someone tries to join)
 
-        if self.state.ready_count == self.settings.max_connections {
+        if self.state.ready_count == MAX_PLAYABLE_CONNECTIONS {
             info!("All players are ready! Changing state to ServerStage::Game");
             self.state.stage = ServerStage::Game;
             self.start_game().await;
@@ -482,7 +476,7 @@ impl Server {
             self.state.ready_count -= 1;
             info!(
                 "Currently {}/{} players are ready",
-                self.state.ready_count, self.settings.max_connections
+                self.state.ready_count, MAX_PLAYABLE_CONNECTIONS
             );
         }
         self.connections.remove(&addr);
