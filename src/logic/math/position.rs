@@ -1,7 +1,7 @@
 use core::fmt;
 use std::ops::Sub;
 
-use log::{debug, trace};
+use log::trace;
 use serde::{Deserialize, Serialize};
 
 use crate::logic::math::vector::Vector2D;

@@ -3,7 +3,7 @@ use std::ops::Index;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::logic::board::{board::Board, field::Field, pawn::Pawn};
+use crate::logic::board::{board::Board, field::Field};
 
 /// View of the board, without any methods. Meant for sending over network
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]

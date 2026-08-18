@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{
     logic::{
-        board::{board_view::BoardView, pawn::CapturePath},
+        board::pawn::CapturePath,
         game_master::{GameMaster, GameResult},
         math::position::Position,
     },
@@ -21,7 +21,7 @@ use crate::{
             ClientMessage::{self},
             Message, ServerMessage,
         },
-        network_identity::{NetworkIdentity, NetworkServerIdentity},
+        network_identity::NetworkServerIdentity,
     },
 };
 

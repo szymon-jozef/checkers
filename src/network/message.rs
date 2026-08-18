@@ -6,7 +6,6 @@ use uuid::Uuid;
 use crate::{
     logic::{
         board::{
-            board::Board,
             board_view::BoardView,
             pawn::{CapturePath, MovePath},
         },

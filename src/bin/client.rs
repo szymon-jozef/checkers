@@ -10,9 +10,8 @@ use checkers::{
         network_identity::NetworkIdentity,
     },
 };
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use tokio::sync::mpsc;
-use uuid::Uuid;
 
 const QUIT_COMMAND: &str = "/quit";
 const HELP_COMMAND: &str = "/help";
