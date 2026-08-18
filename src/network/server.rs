@@ -26,6 +26,7 @@ use crate::{
     settings::{general_settings::SettingsLike, server_settings::ServerSettings},
 };
 
+// TODO! Maybe move this somewhere more global and share with `board` struct
 const MAX_PLAYABLE_CONNECTIONS: usize = 2; // DON'T EVER CHANGE THIS AS GAME OF CHECKERS HAS ONLY TWO PLAYERS, U
 // UNDERSTAND????
 //

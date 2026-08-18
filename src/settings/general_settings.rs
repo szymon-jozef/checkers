@@ -47,6 +47,11 @@ pub trait SettingsLike: Serialize + DeserializeOwned + Default {
         let settings = Self::default();
 
         if let Err(e) = settings.save_to_file() {
+            // this kinda destroys original file if it has
+            // content that is invalid,  i'm not sure if i
+            // like this, but i'll keep it for now.
+            //
+            // ADDING TODO! SO I DONT FORGET AGOUT THIS
             warn!("Could not save server settings to the file, because: {}", e);
         }
 
