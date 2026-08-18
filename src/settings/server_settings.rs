@@ -11,7 +11,6 @@ use crate::settings::general_settings::{DEFAULT_URL, SettingsLike};
 #[derive(Serialize, Deserialize)]
 pub struct ServerSettings {
     pub addr: SocketAddr,
-    pub max_connections: usize,
     pub allow_spectators: bool,
 }
 
@@ -19,8 +18,6 @@ impl Default for ServerSettings {
     fn default() -> Self {
         Self {
             addr: DEFAULT_URL,
-            max_connections: 2, // Maybe this should be a const somewhere in the server code? It
-            // makes no sense to have different value than this
             allow_spectators: false,
         }
     }
