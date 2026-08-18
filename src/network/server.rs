@@ -1,7 +1,7 @@
 use log::{debug, error, info, warn};
 use std::{
     collections::HashMap,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::SocketAddr,
 };
 use tokio::{
     net::TcpListener,
