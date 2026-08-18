@@ -1,8 +1,5 @@
 use log::{debug, error, info, warn};
-use std::{
-    collections::HashMap,
-    net::SocketAddr,
-};
+use std::{collections::HashMap, net::SocketAddr};
 use tokio::{
     net::TcpListener,
     sync::mpsc::{Receiver, Sender},
