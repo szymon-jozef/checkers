@@ -18,4 +18,5 @@ pub enum GuiState {
 pub struct GameContext {
     pub difficulty: BotDificulty,
     pub is_single: bool,
+    pub server_url_buffer: String,
 }

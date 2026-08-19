@@ -1,8 +1,8 @@
 use macroquad::{
     math::{Vec2, vec2},
     ui::{
-        Ui, root_ui,
-        widgets::{Button, Label},
+        Ui, hash,
+        widgets::{Button, InputText, Label},
     },
 };
 
@@ -24,13 +24,22 @@ impl MenuBuilder {
         }
     }
 
+    pub fn text_input(&mut self, ui: &mut Ui, buffer: &mut String) {
+        InputText::new(hash!())
+            .position(vec2(self.center_x, self.current_y))
+            .size(self.button_size)
+            .ui(ui, buffer);
+
+        self.update_height();
+    }
+
     pub fn label(&mut self, ui: &mut Ui, label: &str) {
         Label::new(label)
             .position(vec2(self.center_x, self.current_y))
             .size(self.button_size)
             .ui(ui);
 
-        self.current_y += self.button_size.y + self.spacing;
+        self.update_height();
     }
 
     pub fn button(&mut self, ui: &mut Ui, label: &str) -> bool {
@@ -39,8 +48,11 @@ impl MenuBuilder {
             .size(self.button_size)
             .ui(ui);
 
-        self.current_y += self.button_size.y + self.spacing;
-
+        self.update_height();
         clicked
+    }
+
+    fn update_height(&mut self) {
+        self.current_y += self.button_size.y + self.spacing;
     }
 }

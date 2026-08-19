@@ -8,25 +8,6 @@ use macroquad::{
 
 use crate::ui::{macroquad::menu_builder::MenuBuilder, state::GuiState};
 
-pub async fn get_main_menu_style() -> Skin {
-    let label_style = root_ui()
-        .style_builder()
-        .text_color(WHITE)
-        .font_size(64)
-        .build();
-
-    let button_style = root_ui()
-        .style_builder()
-        .text_color(BLACK)
-        .font_size(32)
-        .build();
-
-    Skin {
-        label_style,
-        button_style,
-        ..root_ui().default_skin()
-    }
-}
 
 pub async fn draw_main_menu(state: &mut GuiState) {
     let menu_size = vec2(screen_width() * 0.5, screen_height() * 0.5);

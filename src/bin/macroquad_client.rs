@@ -1,21 +1,17 @@
-use checkers::{
-    super_advanced_ai::BotDificulty,
-    ui::{
-        macroquad::{
-            difficulty_selection::draw_dificulty_selection,
-            main_menu::{draw_main_menu, get_main_menu_style},
-            mode_selection::draw_mode_selection,
-        },
-        state::{GameContext, GuiState},
+use checkers::ui::{
+    macroquad::{
+        difficulty_selection::draw_dificulty_selection, main_menu::draw_main_menu,
+        mode_selection::draw_mode_selection, server_selection::draw_server_selection,
     },
+    state::{GameContext, GuiState},
 };
 use macroquad::{
-    color::{BLACK, BLUE, RED, WHITE},
+    color::{BLACK, WHITE},
     math::vec2,
     miniquad::{self, conf::LinuxBackend::WaylandWithX11Fallback},
     texture::{DrawTextureParams, draw_texture_ex, load_texture},
     ui::{Skin, root_ui},
-    window::{Conf, clear_background, next_frame, screen_height, screen_width},
+    window::{Conf, screen_height, screen_width},
 };
 
 fn window_conf() -> Conf {
@@ -88,7 +84,7 @@ pub async fn main() {
             }
 
             GuiState::ServerSelection => {
-                todo!();
+                draw_server_selection(&mut state, &mut context).await;
             }
 
             GuiState::Settings => {
