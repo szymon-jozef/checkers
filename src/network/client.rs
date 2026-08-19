@@ -58,7 +58,11 @@ impl Client {
         let settings_clone = settings.clone();
         let update_sender_clone = update_sender.clone();
 
+        let (hanshake_tx, handshake_rx) = tokio::sync::oneshot::channel::<bool>();
+
         tokio::spawn(async move {
+            let mut hanshake_tx = Some(hanshake_tx);
+
             loop {
                 tokio::select! {
                     oldest_msg = conn_reciever.recv() => {
@@ -78,10 +82,16 @@ impl Client {
 
                             ServerMessage::AcceptHandshake => {
                                 info!("Server accepted us! Yay :D");
+                                if let Some(hanshake_tx) = hanshake_tx.take() {
+                                    let _ = hanshake_tx.send(true);
+                                }
                             }
 
                             ServerMessage::DeclineHandshake { reason } => {
                                 error!("Server declined connection: {}", reason);
+                                if let Some(hanshake_tx) = hanshake_tx.take() {
+                                    let _ = hanshake_tx.send(false);
+                                }
                                 break;
                             }
 
@@ -99,10 +109,22 @@ impl Client {
             }
         });
 
-        Some(Client {
-            conn_sender_outgoing,
-            update_receiver: Some(update_receiver),
-        })
+        let is_handshake_accepted: bool = match handshake_rx.await {
+            Ok(is_accepted) => is_accepted,
+            Err(e) => {
+                error!("Error while receiving handshake: {}", e);
+                return None;
+            }
+        };
+
+        if is_handshake_accepted {
+            Some(Client {
+                conn_sender_outgoing,
+                update_receiver: Some(update_receiver),
+            })
+        } else {
+            None
+        }
     }
 
     async fn send_message(&mut self, msg: Result<Message<ClientMessage>, postcard::Error>) {
