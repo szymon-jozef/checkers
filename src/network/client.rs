@@ -23,25 +23,24 @@ pub enum ClientCommands {
 }
 
 pub struct Client {
-    conn_reciever_incoming: Option<Receiver<(SocketAddr, Message<ServerMessage>)>>,
     conn_sender_outgoing: Sender<Message<ClientMessage>>,
-    settings: ClientSettings,
-
-    update_sender: Sender<ServerMessage>,
     update_receiver: Option<Receiver<ServerMessage>>,
 }
 
 impl Client {
+    /// Creates a new instance of clients, connects it to the server and starts update loop
     pub async fn new(settings: Option<ClientSettings>) -> Option<Client> {
         let Some(settings) = settings.or(Some(ClientSettings::new())) else {
             error!("Could not load client settings");
             return None;
         };
 
-        let (conn_sender, conn_reciever) =
+        let (conn_sender, mut conn_reciever) =
             mpsc::channel::<(SocketAddr, Message<ServerMessage>)>(1024);
+
         let mut conn: Connection<ServerMessage, ClientMessage> =
             Connection::new(ConnectionType::Server, conn_sender);
+
         let conn_sender_outgoing = conn.get_sender();
 
         let (update_sender, update_receiver) = mpsc::channel(1024);
@@ -55,32 +54,14 @@ impl Client {
             conn.start_listening().await;
         });
 
-        Some(Client {
-            conn_reciever_incoming: Some(conn_reciever),
-            conn_sender_outgoing,
-
-            settings,
-
-            update_sender,
-            update_receiver: Some(update_receiver),
-        })
-    }
-
-    pub fn update(&mut self) {
-        let Some(mut conn_reciever_incoming) = self.conn_reciever_incoming.take() else {
-            error!("Tried updating, but there's no conn_reciever of incoming messages!");
-            return;
-        };
-
-        let conn_sender = self.conn_sender_outgoing.clone();
-
-        let settings = self.settings.clone();
-        let update_sender = self.update_sender.clone();
+        let conn_sender_outgoing_clone = conn_sender_outgoing.clone();
+        let settings_clone = settings.clone();
+        let update_sender_clone = update_sender.clone();
 
         tokio::spawn(async move {
             loop {
                 tokio::select! {
-                    oldest_msg = conn_reciever_incoming.recv() => {
+                    oldest_msg = conn_reciever.recv() => {
                         if let Some(oldest_msg) = oldest_msg {
                         let (addr, msg) = oldest_msg;
                         debug!("Got message from: {:?}", addr);
@@ -89,10 +70,10 @@ impl Client {
                             ServerMessage::RequestHandshake => {
                                 info!("Server requested handshake!");
                                 let msg = Message::new(ClientMessage::AnswerHandshake {
-                                    player_name: settings.name.clone(),
+                                    player_name: settings_clone.name.clone(),
                                 });
 
-                                let _ = conn_sender.send(msg.unwrap()).await;
+                                let _ = conn_sender_outgoing_clone.send(msg.unwrap()).await;
                             }
 
                             ServerMessage::AcceptHandshake => {
@@ -106,7 +87,7 @@ impl Client {
 
                             _ => { // Pass all messages that require player intervention to the
                                    // local client
-                                let _ = update_sender.send(msg.content).await;
+                                let _ = update_sender_clone.send(msg.content).await;
                             }
                             }
                         } else {
@@ -117,6 +98,11 @@ impl Client {
                 }
             }
         });
+
+        Some(Client {
+            conn_sender_outgoing,
+            update_receiver: Some(update_receiver),
+        })
     }
 
     async fn send_message(&mut self, msg: Result<Message<ClientMessage>, postcard::Error>) {

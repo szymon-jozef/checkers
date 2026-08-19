@@ -88,12 +88,10 @@ async fn run_bot() {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
-    let Some(mut client) = Client::new().await else {
+    let Some(mut client) = Client::new(None).await else {
         println!("Not worky, ending");
         return Ok(());
     };
-
-    client.update();
 
     let (stdin_sender, mut stdin_receiver) = mpsc::channel(1024);
 
