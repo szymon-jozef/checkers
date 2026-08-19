@@ -8,8 +8,9 @@ use crate::{
     settings::{client_settings::ClientSettings, general_settings::DEFAULT_URL},
 };
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Default)]
 pub enum BotDificulty {
+    #[default]
     Easy,
     Normal,
     Hard,

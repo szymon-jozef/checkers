@@ -1,3 +1,4 @@
+pub mod difficulty_selection;
 pub mod main_menu;
-pub mod mode_selection;
 mod menu_builder;
+pub mod mode_selection;

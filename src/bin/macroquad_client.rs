@@ -1,9 +1,13 @@
-use checkers::ui::{
-    macroquad::{
-        main_menu::{draw_main_menu, get_main_menu_style},
-        mode_selection::draw_mode_selection,
+use checkers::{
+    super_advanced_ai::BotDificulty,
+    ui::{
+        macroquad::{
+            difficulty_selection::draw_dificulty_selection,
+            main_menu::{draw_main_menu, get_main_menu_style},
+            mode_selection::draw_mode_selection,
+        },
+        state::{GameContext, GuiState},
     },
-    state::GuiState,
 };
 use macroquad::{
     color::{BLACK, BLUE, RED, WHITE},
@@ -51,6 +55,8 @@ pub async fn main() {
     env_logger::init();
 
     let mut state = Default::default();
+    let mut context = GameContext::default();
+
     let background = load_texture("assets/background.png").await.unwrap();
 
     let main_menu_style = get_general_style().await;
@@ -78,7 +84,7 @@ pub async fn main() {
             }
 
             GuiState::DificultySelection => {
-                todo!();
+                draw_dificulty_selection(&mut state, &mut context).await;
             }
 
             GuiState::ServerSelection => {
