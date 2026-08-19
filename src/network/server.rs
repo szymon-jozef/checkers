@@ -186,7 +186,7 @@ impl Server {
 
                                 ClientMessage::SignalReadiness => {
                                     self.handle_readiness(addr).await
-                                },
+                                }
 
                                 ClientMessage::RequestCapture { capture_path } => {
                                     self.process_capture(capture_path).await;
@@ -282,7 +282,8 @@ impl Server {
             return;
         };
 
-        identity.identity.name = fixed_name
+        identity.identity.name = fixed_name;
+        identity.is_handshaken = true;
     }
 
     async fn process_capture(&mut self, capture_path: CapturePath) {
@@ -313,6 +314,14 @@ impl Server {
     }
 
     async fn handle_readiness(&mut self, addr: SocketAddr) {
+        if !self.connections[&addr].is_handshaken {
+            warn!(
+                "Connection: {} tried sending readiness, but it have not shaken hands. Ignoring...",
+                addr
+            );
+            return;
+        }
+
         self.state.ready_count += 1;
         info!(
             "{} signaled readiness. Currently ready: {}/{}",
