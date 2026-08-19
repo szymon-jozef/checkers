@@ -6,6 +6,7 @@ use std::{
 use checkers::{
     logic::board::pawn::{CapturePath, MovePath},
     network::{client::Client, message::ServerMessage, network_identity::NetworkIdentity},
+    super_advanced_ai::{Bot, BotDificulty},
 };
 use log::{error, warn};
 use tokio::sync::mpsc;
@@ -14,6 +15,7 @@ const QUIT_COMMAND: &str = "/quit";
 const HELP_COMMAND: &str = "/help";
 const SEND_COMMAND: &str = "/send";
 const READY_COMMAND: &str = "/ready";
+const SINGLEPLAYER_COMMAND: &str = "/single";
 
 const CAPTURE_COMMAND: &str = "/capture";
 const MOVE_COMMAND: &str = "/move";
@@ -22,7 +24,9 @@ enum CliCommands {
     Quit,
     Help,
     Send,
+
     Ready,
+    Single,
 
     Capture,
     Move,
@@ -46,6 +50,7 @@ impl TryFrom<&str> for CliCommands {
             HELP_COMMAND => Ok(CliCommands::Help),
             SEND_COMMAND => Ok(CliCommands::Send),
             READY_COMMAND => Ok(CliCommands::Ready),
+            SINGLEPLAYER_COMMAND => Ok(CliCommands::Single),
 
             CAPTURE_COMMAND => Ok(CliCommands::Capture),
             MOVE_COMMAND => Ok(CliCommands::Move),
@@ -72,6 +77,11 @@ impl Default for ClientContext {
             available_moves: None,
         }
     }
+}
+
+async fn run_bot() {
+    let bot = Bot::new(BotDificulty::Easy).await;
+    bot.game_loop().await;
 }
 
 #[tokio::main]
@@ -112,12 +122,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 │\t {} - show this message             
 │\t {} - message the server you're ready
 │\t {} - send text message to the server
+│\t {} - play alone
 │
 │\t {} <index>- choose a capture path from the list
 │\t {} <index> <index>- choose move from the list. First number is pawn you want to move and second is position it should take
 └───────────────────────────────────────
         ",
-        QUIT_COMMAND, HELP_COMMAND, READY_COMMAND, SEND_COMMAND, CAPTURE_COMMAND, MOVE_COMMAND
+        QUIT_COMMAND, HELP_COMMAND, READY_COMMAND, SEND_COMMAND, SINGLEPLAYER_COMMAND , CAPTURE_COMMAND, MOVE_COMMAND
     );
 
     println!("───────Type /help for help───────");
@@ -199,6 +210,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             CliCommands::Ready => {
                                 client.signal_readiness().await;
                             }
+
+                            CliCommands::Single => {
+                                println!("Tried connecting bot to the server! Make sure to be /ready");
+                                tokio::spawn(run_bot());
+                            }
+
                             CliCommands::Send => {
                                 let mut args: String = words[1..].join(" ");
                                 args = args.trim().to_string();

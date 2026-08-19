@@ -28,6 +28,7 @@ impl Bot {
             .await
             .expect("Couldn't connect to the server. Is it online?");
 
+        client.update();
         client.signal_readiness().await; // bot is always ready
 
         let mut receiver = client
@@ -83,12 +84,8 @@ impl Bot {
                             content,
                         } => {
                             info!("Bot got message from [{}] - {}", sender, content);
-                            client
-                                .send_text_message(
-                                    "Why are you messaging bot? Are you stupid?".to_string(),
-                                )
-                                .await;
                         }
+
                         crate::network::message::ServerMessage::GameEnd { result } => {
                             info!("Game has ended!");
                             match result {
