@@ -1,17 +1,15 @@
-use log::info;
 use macroquad::{
-    color::{BLACK, WHITE},
-    input::is_mouse_button_pressed,
+    color::WHITE,
     math::vec2,
-    ui::{StyleBuilder, hash, root_ui},
-    window::{clear_background, next_frame, screen_height, screen_width},
+    ui::{hash, root_ui},
+    window::{next_frame, screen_height, screen_width},
 };
 
 use crate::ui::state::GuiState;
 
 pub async fn draw_main_menu(state: &mut GuiState) {
-    let style = root_ui().style_builder().text_color(WHITE).font_size(64);
-    let text_style = root_ui().style_builder().text_color(WHITE).font_size(32);
+    let _style = root_ui().style_builder().text_color(WHITE).font_size(64);
+    let _text_style = root_ui().style_builder().text_color(WHITE).font_size(32);
 
     let window_size = vec2(370.0, 320.0);
 
