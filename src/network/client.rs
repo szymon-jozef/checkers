@@ -32,8 +32,11 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn new() -> Option<Client> {
-        let settings = ClientSettings::new();
+    pub async fn new(settings: Option<ClientSettings>) -> Option<Client> {
+        let Some(settings) = settings.or(Some(ClientSettings::new())) else {
+            error!("Could not load client settings");
+            return None;
+        };
 
         let (conn_sender, conn_reciever) =
             mpsc::channel::<(SocketAddr, Message<ServerMessage>)>(1024);

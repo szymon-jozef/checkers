@@ -33,6 +33,7 @@ pub struct NetworkServerIdentity {
     // writing this since 10 a.m. and it's 9 p.m. already)
     pub identity: NetworkIdentity,
     pub sender: Sender<Message<ServerMessage>>,
+    pub is_handshaken: bool,
 }
 
 impl NetworkServerIdentity {
@@ -40,6 +41,7 @@ impl NetworkServerIdentity {
         Self {
             identity: NetworkIdentity::default(),
             sender,
+            is_handshaken: false,
         }
     }
 }
