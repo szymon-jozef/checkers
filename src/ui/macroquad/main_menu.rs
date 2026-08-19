@@ -1,54 +1,48 @@
 use macroquad::{
-    color::WHITE,
-    math::{Rect, Vec2, vec2},
-    prelude::ImageFormat,
-    texture::Image,
-    ui::{Layout, Skin, Ui, hash, root_ui, widgets::Button},
+    color::{BLACK, GRAY, WHITE},
+    math::vec2,
+    shapes::draw_rectangle,
+    ui::{Skin, hash, root_ui, widgets::Group},
     window::{next_frame, screen_height, screen_width},
 };
 
-use crate::ui::state::GuiState;
+use crate::ui::{macroquad::menu_builder::MenuBuilder, state::GuiState};
 
-pub struct MenuBuilder {
-    center_x: f32,
-    current_y: f32,
-    button_size: Vec2,
-    spacing: f32,
-}
+pub async fn get_main_menu_style() -> Skin {
+    let label_style = root_ui()
+        .style_builder()
+        .text_color(WHITE)
+        .font_size(64)
+        .build();
 
-impl MenuBuilder {
-    pub fn new(window_width: f32, start_y: f32) -> Self {
-        let button_size = vec2(200.0, 50.0);
-        Self {
-            center_x: (window_width - button_size.x) / 2.0,
-            current_y: start_y,
-            button_size,
-            spacing: 15.0,
-        }
-    }
+    let button_style = root_ui()
+        .style_builder()
+        .text_color(BLACK)
+        .font_size(32)
+        .build();
 
-    pub fn button(&mut self, ui: &mut Ui, label: &str) -> bool {
-        let clicked = Button::new(label)
-            .position(vec2(self.center_x, self.current_y))
-            .size(self.button_size)
-            .ui(ui);
-
-        self.current_y += self.button_size.y + self.spacing;
-
-        clicked
+    Skin {
+        label_style,
+        button_style,
+        ..root_ui().default_skin()
     }
 }
 
 pub async fn draw_main_menu(state: &mut GuiState) {
-    let window_size = vec2(1200.0, 620.0);
-    let mut menu_builder = MenuBuilder::new(screen_width(), 10.0);
+    let menu_size = vec2(screen_width() * 0.5, screen_height() * 0.5);
+    let menu_pos = vec2(
+        screen_width() / 2.0 - menu_size.x / 2.0,
+        screen_height() / 2.0 - menu_size.y / 2.0,
+    );
 
-    root_ui().window(
-        hash!(),
-        vec2(screen_width() / 2.0, screen_height() / 2.0),
-        window_size,
-        |ui| {
-            ui.label(None, "Main Menu");
+    let mut menu_builder = MenuBuilder::new(menu_size.x, menu_size.y * 0.1);
+
+    draw_rectangle(menu_pos.x, menu_pos.y, menu_size.x, menu_size.y, GRAY);
+
+    Group::new(hash!(), menu_size)
+        .position(menu_pos)
+        .ui(&mut root_ui(), |ui| {
+            menu_builder.label(ui, "Main menu");
 
             if menu_builder.button(ui, "Play") {
                 *state = GuiState::Game;
@@ -61,8 +55,7 @@ pub async fn draw_main_menu(state: &mut GuiState) {
             if menu_builder.button(ui, "Quit") {
                 *state = GuiState::Exit;
             }
-        },
-    );
+        });
 
     next_frame().await;
 }

@@ -1,11 +1,13 @@
-use checkers::ui::{macroquad::main_menu::draw_main_menu, state::GuiState};
+use checkers::ui::{
+    macroquad::main_menu::{draw_main_menu, get_main_menu_style},
+    state::GuiState,
+};
 use macroquad::{
-    color::{BLACK, BLUE, RED, WHITE},
+    color::{BLUE, RED, WHITE},
     math::vec2,
     miniquad::{self, conf::LinuxBackend::WaylandWithX11Fallback},
-    prelude::ImageFormat,
-    texture::{DrawTextureParams, Image, Texture2D, draw_texture, draw_texture_ex, load_texture},
-    ui::{Skin, root_ui},
+    texture::{DrawTextureParams, draw_texture_ex, load_texture},
+    ui::root_ui,
     window::{Conf, clear_background, next_frame, screen_height, screen_width},
 };
 
@@ -26,42 +28,25 @@ pub async fn main() {
     env_logger::init();
 
     let mut state = Default::default();
-
     let background = load_texture("assets/background.png").await.unwrap();
 
-    let style = root_ui()
-        .style_builder()
-        .text_color(WHITE)
-        .font_size(64)
-        .build();
-
-    let button_style = root_ui()
-        .style_builder()
-        .text_color(BLACK)
-        .font_size(32)
-        .build();
-
-    let skin = Skin {
-        label_style: style,
-        button_style: button_style,
-        ..root_ui().default_skin()
-    };
-
-    root_ui().push_skin(&skin);
+    let main_menu_style = get_main_menu_style().await;
+    root_ui().push_skin(&main_menu_style);
 
     loop {
+        draw_texture_ex(
+            &background,
+            0.0,
+            0.0,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(screen_width(), screen_height())),
+                ..DrawTextureParams::default()
+            },
+        );
+
         match state {
             GuiState::MainMenu => {
-                draw_texture_ex(
-                    &background,
-                    0.0,
-                    0.0,
-                    WHITE,
-                    DrawTextureParams {
-                        dest_size: Some(vec2(screen_width(), screen_height())),
-                        ..DrawTextureParams::default()
-                    },
-                );
                 draw_main_menu(&mut state).await;
             }
 
