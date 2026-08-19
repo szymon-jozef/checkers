@@ -45,7 +45,7 @@ pub async fn draw_main_menu(state: &mut GuiState) {
             menu_builder.label(ui, "Main menu");
 
             if menu_builder.button(ui, "Play") {
-                *state = GuiState::Game;
+                *state = GuiState::ModeSelection;
             }
 
             if menu_builder.button(ui, "Settings") {
