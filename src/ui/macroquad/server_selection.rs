@@ -28,14 +28,20 @@ pub async fn draw_server_selection(state: &mut GuiState, context: &mut GameConte
     Group::new(hash!(), menu_size)
         .position(menu_pos)
         .ui(&mut root_ui(), |ui| {
+            menu_builder.label(ui, "Host");
+            if menu_builder.button(ui, "Start") {
+                context.gamemode = crate::ui::state::GameMode::Multiplayer { is_hosting: true };
+            }
+
             menu_builder.label(ui, "Server selection");
 
             menu_builder.text_input(ui, &mut context.server_url_buffer);
             //context.normalise_url();
 
             if menu_builder.button(ui, "Connect") {
-                context.is_single = false;
+                context.gamemode = crate::ui::state::GameMode::Multiplayer { is_hosting: false };
                 *state = GuiState::Game;
+                // TODO Validate url before connecting or something like that
             }
 
             if menu_builder.button(ui, "Go back") {

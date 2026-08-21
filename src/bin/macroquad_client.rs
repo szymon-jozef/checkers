@@ -76,7 +76,7 @@ pub async fn main() {
             }
 
             GuiState::ModeSelection => {
-                draw_mode_selection(&mut state).await;
+                draw_mode_selection(&mut state, &mut context).await;
             }
 
             GuiState::DificultySelection => {

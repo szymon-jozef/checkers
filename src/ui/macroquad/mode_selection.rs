@@ -8,10 +8,13 @@ use macroquad::{
 
 use crate::ui::{
     macroquad::menu_builder::MenuBuilder,
-    state::GuiState::{self, ServerSelection},
+    state::{
+        GameContext,
+        GuiState::{self, ServerSelection},
+    },
 };
 
-pub async fn draw_mode_selection(state: &mut GuiState) {
+pub async fn draw_mode_selection(state: &mut GuiState, context: &mut GameContext) {
     let menu_size = vec2(screen_width() * 0.5, screen_height() * 0.5);
     let menu_pos = vec2(
         screen_width() / 2.0 - menu_size.x / 2.0,
@@ -28,6 +31,7 @@ pub async fn draw_mode_selection(state: &mut GuiState) {
             menu_builder.label(ui, "Mode selection");
 
             if menu_builder.button(ui, "Singleplayer") {
+                context.gamemode = crate::ui::state::GameMode::Singleplayer;
                 *state = GuiState::DificultySelection;
             }
 

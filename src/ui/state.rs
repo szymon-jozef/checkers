@@ -15,8 +15,17 @@ pub enum GuiState {
 }
 
 #[derive(Default)]
+pub enum GameMode {
+    #[default]
+    Singleplayer,
+    Multiplayer {
+        is_hosting: bool,
+    },
+}
+
+#[derive(Default)]
 pub struct GameContext {
     pub difficulty: BotDificulty,
-    pub is_single: bool,
+    pub gamemode: GameMode,
     pub server_url_buffer: String,
 }

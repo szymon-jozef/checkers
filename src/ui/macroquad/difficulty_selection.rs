@@ -31,21 +31,22 @@ pub async fn draw_dificulty_selection(state: &mut GuiState, context: &mut GameCo
             menu_builder.label(ui, "Difficulty Selection");
 
             if menu_builder.button(ui, "Easy") {
-                context.is_single = true;
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Easy;
                 *state = GuiState::Game;
             }
 
             if menu_builder.button(ui, "Medium") {
-                context.is_single = true;
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Normal;
                 *state = GuiState::Game;
             }
 
             if menu_builder.button(ui, "Hard") {
-                context.is_single = true;
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Hard;
                 *state = GuiState::Game;
+            }
+
+            if menu_builder.button(ui, "Go back") {
+                *state = GuiState::ModeSelection;
             }
         });
 
