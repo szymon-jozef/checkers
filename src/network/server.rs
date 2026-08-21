@@ -30,8 +30,9 @@ const MAX_PLAYABLE_CONNECTIONS: usize = 2; // DON'T EVER CHANGE THIS AS GAME OF 
 // There will be a spectator mode, hence the name __PLAYABLE__ connection. You will be able to have
 // more connections, but they won't be able to play
 
-#[derive(PartialEq)]
-enum ServerStage {
+#[derive(Debug, PartialEq, Default)]
+pub enum ServerStage {
+    #[default]
     Lobby,
     Game,
     End,

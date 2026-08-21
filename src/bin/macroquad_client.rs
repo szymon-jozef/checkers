@@ -1,7 +1,8 @@
 use checkers::ui::{
     macroquad::{
-        difficulty_selection::draw_dificulty_selection, main_menu::draw_main_menu,
-        mode_selection::draw_mode_selection, server_selection::draw_server_selection,
+        difficulty_selection::draw_dificulty_selection, game::GameClient,
+        main_menu::draw_main_menu, mode_selection::draw_mode_selection,
+        server_selection::draw_server_selection,
     },
     state::{GameContext, GuiState},
 };
@@ -40,9 +41,16 @@ pub async fn get_general_style() -> Skin {
         .font_size(32)
         .build();
 
+    let checkbox_style = root_ui()
+        .style_builder()
+        .color(BLACK)
+        .text_color(BLACK)
+        .build();
+
     Skin {
         label_style,
         button_style,
+        checkbox_style,
         ..root_ui().default_skin()
     }
 }
@@ -71,7 +79,7 @@ pub async fn main() {
             },
         );
 
-        match &state {
+        match &mut state {
             GuiState::MainMenu => {
                 draw_main_menu(&mut state).await;
             }
@@ -95,7 +103,13 @@ pub async fn main() {
                     Ok(client) => {
                         if let Some(client) = client {
                             draw_text("Connected!", 0.0, 0.0, 64.0, BLACK);
-                            state = GuiState::Game(client);
+                            let client = GameClient::new(client, &context);
+                            if let Some(client) = client {
+                                state = GuiState::Game(client);
+                            } else {
+                                // ugly ass code
+                                draw_text("Could not connect!", 0.0, 0.0, 64.0, BLACK);
+                            }
                         } else {
                             draw_text("Could not connect!", 0.0, 0.0, 64.0, BLACK);
                         }
@@ -111,7 +125,8 @@ pub async fn main() {
             }
 
             GuiState::Game(client) => {
-                draw_text("Gamer time", 100.0, 100.0, 64.0, BLACK);
+                client.update();
+                client.draw();
             }
 
             GuiState::Exit => {

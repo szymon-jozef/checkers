@@ -35,17 +35,17 @@ pub async fn draw_dificulty_selection(state: &mut GuiState, context: &mut GameCo
 
             if menu_builder.button(ui, "Easy") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Easy;
-                *state = GuiState::Connecting(connect_to_server(context.clone()));
+                *state = GuiState::Connecting(connect_to_server());
             }
 
             if menu_builder.button(ui, "Medium") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Normal;
-                *state = GuiState::Connecting(connect_to_server(context.clone()));
+                *state = GuiState::Connecting(connect_to_server());
             }
 
             if menu_builder.button(ui, "Hard") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Hard;
-                *state = GuiState::Connecting(connect_to_server(context.clone()));
+                *state = GuiState::Connecting(connect_to_server());
             }
 
             if menu_builder.button(ui, "Go back") {
