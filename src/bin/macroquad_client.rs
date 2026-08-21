@@ -9,9 +9,10 @@ use macroquad::{
     color::{BLACK, WHITE},
     math::vec2,
     miniquad::{self, conf::LinuxBackend::WaylandWithX11Fallback},
+    text::draw_text,
     texture::{DrawTextureParams, draw_texture_ex, load_texture},
     ui::{Skin, root_ui},
-    window::{Conf, screen_height, screen_width},
+    window::{Conf, next_frame, screen_height, screen_width},
 };
 
 fn window_conf() -> Conf {
@@ -70,7 +71,7 @@ pub async fn main() {
             },
         );
 
-        match state {
+        match &state {
             GuiState::MainMenu => {
                 draw_main_menu(&mut state).await;
             }
@@ -87,16 +88,36 @@ pub async fn main() {
                 draw_server_selection(&mut state, &mut context).await;
             }
 
+            GuiState::Connecting(receiver) => {
+                draw_text("Connecting...", 0.0, 0.0, 64.0, BLACK);
+
+                match receiver.try_recv() {
+                    Ok(client) => {
+                        if let Some(client) = client {
+                            draw_text("Connected!", 0.0, 0.0, 64.0, BLACK);
+                            state = GuiState::Game(client);
+                        } else {
+                            draw_text("Could not connect!", 0.0, 0.0, 64.0, BLACK);
+                        }
+                    }
+                    Err(_) => {
+                        draw_text("Error", 0.0, 0.0, 64.0, BLACK);
+                    }
+                }
+            }
+
             GuiState::Settings => {
                 todo!();
             }
-            GuiState::Game => {
-                todo!();
+
+            GuiState::Game(client) => {
+                draw_text("Gamer time", 100.0, 100.0, 64.0, BLACK);
             }
 
             GuiState::Exit => {
                 break;
             }
         }
+        next_frame().await;
     }
 }

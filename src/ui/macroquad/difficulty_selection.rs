@@ -11,6 +11,7 @@ use crate::ui::{
     state::{
         GameContext,
         GuiState::{self},
+        connect_to_server,
     },
 };
 
@@ -30,25 +31,25 @@ pub async fn draw_dificulty_selection(state: &mut GuiState, context: &mut GameCo
         .ui(&mut root_ui(), |ui| {
             menu_builder.label(ui, "Difficulty Selection");
 
+            // TODO! refactor this ugly ass code
+
             if menu_builder.button(ui, "Easy") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Easy;
-                *state = GuiState::Game;
+                *state = GuiState::Connecting(connect_to_server(context.clone()));
             }
 
             if menu_builder.button(ui, "Medium") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Normal;
-                *state = GuiState::Game;
+                *state = GuiState::Connecting(connect_to_server(context.clone()));
             }
 
             if menu_builder.button(ui, "Hard") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Hard;
-                *state = GuiState::Game;
+                *state = GuiState::Connecting(connect_to_server(context.clone()));
             }
 
             if menu_builder.button(ui, "Go back") {
                 *state = GuiState::ModeSelection;
             }
         });
-
-    next_frame().await;
 }

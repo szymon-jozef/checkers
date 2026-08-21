@@ -11,6 +11,7 @@ use crate::ui::{
     state::{
         GameContext,
         GuiState::{self},
+        connect_to_server,
     },
 };
 
@@ -40,7 +41,7 @@ pub async fn draw_server_selection(state: &mut GuiState, context: &mut GameConte
 
             if menu_builder.button(ui, "Connect") {
                 context.gamemode = crate::ui::state::GameMode::Multiplayer { is_hosting: false };
-                *state = GuiState::Game;
+                *state = GuiState::Connecting(connect_to_server(context.clone()));
                 // TODO Validate url before connecting or something like that
             }
 
@@ -48,6 +49,4 @@ pub async fn draw_server_selection(state: &mut GuiState, context: &mut GameConte
                 *state = GuiState::ModeSelection;
             }
         });
-
-    next_frame().await;
 }

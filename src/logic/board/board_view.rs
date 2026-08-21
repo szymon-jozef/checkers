@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::logic::board::{board::Board, field::Field};
 
 /// View of the board, without any methods. Meant for sending over network
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct BoardView {
     pub board: Vec<Field>,
     pub size: usize,

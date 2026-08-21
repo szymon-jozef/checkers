@@ -43,6 +43,4 @@ pub async fn draw_mode_selection(state: &mut GuiState, context: &mut GameContext
                 *state = GuiState::MainMenu;
             }
         });
-
-    next_frame().await;
 }

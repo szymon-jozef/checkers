@@ -8,7 +8,6 @@ use macroquad::{
 
 use crate::ui::{macroquad::menu_builder::MenuBuilder, state::GuiState};
 
-
 pub async fn draw_main_menu(state: &mut GuiState) {
     let menu_size = vec2(screen_width() * 0.5, screen_height() * 0.5);
     let menu_pos = vec2(
@@ -37,6 +36,4 @@ pub async fn draw_main_menu(state: &mut GuiState) {
                 *state = GuiState::Exit;
             }
         });
-
-    next_frame().await;
 }
