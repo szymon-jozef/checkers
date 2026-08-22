@@ -111,11 +111,14 @@ impl GameClient {
     fn draw_lobby(&mut self) {
         let lobby = &self.lobby;
 
+        let background_x = lobby.checkbox_size.x * 10.0;
+        let background_y = lobby.checkbox_size.y * 10.0;
+
         draw_rectangle(
-            lobby.checkbox_pos.x,
-            lobby.checkbox_pos.y,
-            lobby.checkbox_size.x * 10.0,
-            lobby.checkbox_size.y * 10.0,
+            lobby.checkbox_pos.x - background_x * 0.5,
+            lobby.checkbox_pos.y - background_y * 0.5,
+            background_x,
+            background_y,
             GRAY,
         );
 
