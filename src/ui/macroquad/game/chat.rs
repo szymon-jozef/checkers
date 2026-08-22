@@ -93,9 +93,21 @@ impl Chat {
 }
 
 fn wrap_message(ui: &mut Ui, msg: &String, font_size: u16, chat_width: f32) {
+    let chat_width = chat_width - 20.0; // we leave some room
+
     let mut buffer = String::new();
 
+    if measure_text(msg, None, font_size, 1.0).width < chat_width {
+        ui.label(None, &msg);
+        return;
+    }
+
     for word in msg.split_whitespace() {
+        if measure_text(word, None, font_size, 1.0).width >= chat_width {
+            wrap_one_word(ui, word, font_size, chat_width);
+            continue;
+        }
+
         let test_string = if buffer.is_empty() {
             word.to_string()
         } else {
@@ -104,7 +116,7 @@ fn wrap_message(ui: &mut Ui, msg: &String, font_size: u16, chat_width: f32) {
 
         let test_width = measure_text(&test_string, None, font_size, 1.0).width;
 
-        if test_width < chat_width - 20.0 {
+        if test_width < chat_width {
             buffer = test_string;
         } else {
             if !buffer.is_empty() {
@@ -117,5 +129,28 @@ fn wrap_message(ui: &mut Ui, msg: &String, font_size: u16, chat_width: f32) {
 
     if !buffer.is_empty() {
         ui.label(None, &buffer);
+    }
+}
+
+fn wrap_one_word(ui: &mut Ui, msg: &str, font_size: u16, chat_width: f32) {
+    if measure_text(msg, None, font_size, 1.0).width < chat_width {
+        return;
+    }
+
+    let msg_half = msg.chars().count() / 2;
+
+    let first_half: String = msg.chars().take(msg_half).collect();
+    let second_half: String = msg.chars().skip(msg_half).collect();
+
+    if measure_text(&first_half, None, font_size, 1.0).width >= chat_width {
+        wrap_one_word(ui, &first_half, font_size, chat_width);
+    } else {
+        ui.label(None, &format!("{}-", first_half));
+    }
+
+    if measure_text(&second_half, None, font_size, 1.0).width >= chat_width {
+        wrap_one_word(ui, &second_half, font_size, chat_width);
+    } else {
+        ui.label(None, &format!("{}-", second_half)); // TODO! Last word always has - at the end. 
     }
 }
