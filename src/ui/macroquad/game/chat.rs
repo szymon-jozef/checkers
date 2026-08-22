@@ -3,8 +3,9 @@ use macroquad::{
     color::{BLACK, WHITE},
     math::{Rect, vec2},
     shapes::draw_rectangle,
+    text::measure_text,
     ui::{
-        Skin, hash, root_ui,
+        Skin, Ui, hash, root_ui,
         widgets::{Group, InputText, Label},
     },
     window::{screen_height, screen_width},
@@ -63,7 +64,7 @@ impl Chat {
         let chat_size = vec2(self.area.w, self.area.h - input_size.y);
         let chat_pos = vec2(self.area.x, self.area.y);
 
-        let font_size = 12;
+        let font_size = (self.area.w * 0.1) as u16;
 
         let label_style = root_ui()
             .style_builder()
@@ -82,10 +83,39 @@ impl Chat {
             .position(chat_pos)
             .ui(&mut root_ui(), |ui| {
                 for message in &self.messages {
-                    ui.label(None, &format!("[{}] {}", message.sender, message.content));
+                    ui.label(None, &format!("[{}]", message.sender));
+                    wrap_message(ui, &message.content, font_size, chat_size.x);
                 }
             });
 
         root_ui().pop_skin();
+    }
+}
+
+fn wrap_message(ui: &mut Ui, msg: &String, font_size: u16, chat_width: f32) {
+    let mut buffer = String::new();
+
+    for word in msg.split_whitespace() {
+        let test_string = if buffer.is_empty() {
+            word.to_string()
+        } else {
+            format!("{} {}", buffer, word)
+        };
+
+        let test_width = measure_text(&test_string, None, font_size, 1.0).width;
+
+        if test_width < chat_width - 20.0 {
+            buffer = test_string;
+        } else {
+            if !buffer.is_empty() {
+                ui.label(None, &buffer);
+            }
+
+            buffer = word.to_string();
+        }
+    }
+
+    if !buffer.is_empty() {
+        ui.label(None, &buffer);
     }
 }
