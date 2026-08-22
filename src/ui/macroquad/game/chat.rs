@@ -1,14 +1,19 @@
+use log::debug;
 use macroquad::{
-    color::WHITE,
+    color::{BLACK, WHITE},
     math::{Rect, vec2},
     shapes::draw_rectangle,
-    ui::{hash, root_ui, widgets::InputText},
+    ui::{
+        Skin, hash, root_ui,
+        widgets::{Group, InputText, Label},
+    },
     window::{screen_height, screen_width},
 };
 use tokio::sync::mpsc::Sender;
 
 use crate::ui::macroquad::game::game::GuiCommands;
 
+#[derive(Debug)]
 struct Message {
     sender: String,
     content: String,
@@ -45,7 +50,7 @@ impl Chat {
     }
 
     pub fn draw(&mut self) {
-        draw_rectangle(self.area.x, self.area.y, self.area.w, self.area.h, WHITE);
+        draw_rectangle(self.area.x, self.area.y, self.area.w, self.area.h, BLACK);
 
         let input_size = vec2(self.area.w, self.area.h * 0.1);
         let input_pos = vec2(self.area.x, self.area.h - input_size.y);
@@ -54,5 +59,33 @@ impl Chat {
             .position(input_pos)
             .size(input_size)
             .ui(&mut root_ui(), &mut self.message_buffer);
+
+        let chat_size = vec2(self.area.w, self.area.h - input_size.y);
+        let chat_pos = vec2(self.area.x, self.area.y);
+
+        let font_size = 12;
+
+        let label_style = root_ui()
+            .style_builder()
+            .font_size(font_size)
+            .text_color(WHITE)
+            .build();
+
+        let chat_skin: Skin = Skin {
+            label_style,
+            ..root_ui().default_skin()
+        };
+
+        root_ui().push_skin(&chat_skin);
+
+        Group::new(hash!(), chat_size)
+            .position(chat_pos)
+            .ui(&mut root_ui(), |ui| {
+                for message in &self.messages {
+                    ui.label(None, &format!("[{}] {}", message.sender, message.content));
+                }
+            });
+
+        root_ui().pop_skin();
     }
 }
