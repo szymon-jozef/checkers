@@ -60,6 +60,7 @@ pub enum ServerMessage {
 pub enum ClientMessage {
     AnswerHandshake { player_name: String },
     SignalReadiness,
+    SignalUnreadiness,
 
     ConnectionDead { addr: SocketAddr },
 

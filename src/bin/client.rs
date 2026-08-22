@@ -15,6 +15,7 @@ const QUIT_COMMAND: &str = "/quit";
 const HELP_COMMAND: &str = "/help";
 const SEND_COMMAND: &str = "/send";
 const READY_COMMAND: &str = "/ready";
+const UNREADY_COMMAND: &str = "/unready";
 const SINGLEPLAYER_COMMAND: &str = "/single";
 
 const CAPTURE_COMMAND: &str = "/capture";
@@ -26,6 +27,8 @@ enum CliCommands {
     Send,
 
     Ready,
+    Unready,
+
     Single,
 
     Capture,
@@ -50,6 +53,7 @@ impl TryFrom<&str> for CliCommands {
             HELP_COMMAND => Ok(CliCommands::Help),
             SEND_COMMAND => Ok(CliCommands::Send),
             READY_COMMAND => Ok(CliCommands::Ready),
+            UNREADY_COMMAND => Ok(CliCommands::Unready),
             SINGLEPLAYER_COMMAND => Ok(CliCommands::Single),
 
             CAPTURE_COMMAND => Ok(CliCommands::Capture),
@@ -119,6 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 │\t {} - quit                        
 │\t {} - show this message             
 │\t {} - message the server you're ready
+│\t {} - revoke readiness
 │\t {} - send text message to the server
 │\t {} - play alone
 │
@@ -126,7 +131,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 │\t {} <index> <index>- choose move from the list. First number is pawn you want to move and second is position it should take
 └───────────────────────────────────────
         ",
-        QUIT_COMMAND, HELP_COMMAND, READY_COMMAND, SEND_COMMAND, SINGLEPLAYER_COMMAND , CAPTURE_COMMAND, MOVE_COMMAND
+        QUIT_COMMAND, HELP_COMMAND, READY_COMMAND, UNREADY_COMMAND, SEND_COMMAND, SINGLEPLAYER_COMMAND , CAPTURE_COMMAND, MOVE_COMMAND
     );
 
     println!("───────Type /help for help───────");
@@ -207,6 +212,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                             CliCommands::Ready => {
                                 client.signal_readiness().await;
+                            }
+
+                            CliCommands::Unready => {
+                                client.revoke_readiness().await;
                             }
 
                             CliCommands::Single => {

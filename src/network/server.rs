@@ -189,6 +189,10 @@ impl Server {
                                     self.handle_readiness(addr).await
                                 }
 
+                                ClientMessage::SignalUnreadiness => {
+                                    self.handle_unreadiness(addr).await;
+                                }
+
                                 ClientMessage::RequestCapture { capture_path } => {
                                     self.process_capture(capture_path).await;
                                 }
@@ -335,6 +339,37 @@ impl Server {
             self.state.stage = ServerStage::Game;
             self.start_game().await;
         }
+    }
+
+    async fn handle_unreadiness(&mut self, addr: SocketAddr) {
+        if !self.connections[&addr].is_handshaken {
+            warn!(
+                "Connection: {} tried revoking readiness, but hands were not shaken. Ignoring....",
+                addr
+            );
+            return;
+        }
+
+        if self.state.stage != ServerStage::Lobby {
+            warn!(
+                "Player {} tried revoking readiness, but game already started. Ignoring...",
+                addr
+            );
+            return;
+        }
+
+        self.state.ready_count -= 1;
+
+        self.connections
+            .get_mut(&addr)
+            .expect("Could not get the indentity of the player that wanted to revoke readinessl")
+            .identity
+            .is_ready = false;
+
+        info!(
+            "Player {} revoked his readiness. Currently ready: {}/{}",
+            addr, self.state.ready_count, MAX_PLAYABLE_CONNECTIONS
+        );
     }
 
     /* === Sending messages === */

@@ -168,6 +168,12 @@ impl Client {
         self.send_message(msg).await;
     }
 
+    pub async fn revoke_readiness(&mut self) {
+        debug!("Revoking readiness and sending it to the server...");
+        let msg = Message::new(ClientMessage::SignalUnreadiness);
+        self.send_message(msg).await;
+    }
+
     pub fn get_update_receiver(&mut self) -> Option<Receiver<ServerMessage>> {
         self.update_receiver.take()
     }
