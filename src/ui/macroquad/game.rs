@@ -1,3 +1,5 @@
+use std::sync::mpsc::{self, Sender};
+
 use log::{error, info};
 use macroquad::{
     color::GRAY,
@@ -18,7 +20,7 @@ use crate::{
 };
 
 pub struct GameClient {
-    client: Client,
+    cmd_sender: Sender<GuiCommands>,
     update_receiver: Receiver<ServerMessage>,
 
     identity: Option<NetworkIdentity>,
@@ -44,11 +46,54 @@ struct Lobby {
     checkbox_size: Vec2,
 }
 
+enum GuiCommands {
+    Send(String),
+
+    Ready,
+    Unready,
+
+    Capture,
+    Move,
+}
+
 impl GameClient {
     pub fn new(mut client: Client, context: &GameContext) -> Option<Self> {
         let Some(update_receiver) = client.get_update_receiver() else {
             return None;
         };
+
+        let (cmd_sender, cmd_recv) = mpsc::channel::<GuiCommands>();
+
+        std::thread::spawn(|| {
+            let rt = tokio::runtime::Runtime::new().unwrap(); // i dont like this
+
+            rt.spawn(async move {
+                loop {
+                    match cmd_recv.recv() {
+                        Ok(cmd) => match cmd {
+                            GuiCommands::Send(content) => {
+                                client.send_text_message(content).await;
+                            }
+
+                            GuiCommands::Ready => {
+                                client.signal_readiness().await;
+                            }
+
+                            GuiCommands::Unready => {
+                                client.revoke_readiness().await;
+                            }
+                            GuiCommands::Capture => todo!(),
+                            GuiCommands::Move => todo!(),
+                        },
+
+                        Err(e) => {
+                            error!("Connection broken: {}", e);
+                            return;
+                        }
+                    }
+                }
+            });
+        });
 
         let board = BoardView::default();
 
@@ -72,7 +117,7 @@ impl GameClient {
         };
 
         Some(Self {
-            client,
+            cmd_sender,
             update_receiver,
             identity: None,
 
@@ -122,11 +167,20 @@ impl GameClient {
             GRAY,
         );
 
+        let before_click: bool = self.lobby.is_ready;
         Checkbox::new(hash!())
             .pos(self.lobby.checkbox_pos)
             .label("Ready")
             .size(self.lobby.checkbox_size)
             .ui(&mut root_ui(), &mut self.lobby.is_ready);
+
+        if before_click != self.lobby.is_ready {
+            if self.lobby.is_ready {
+                let _ = self.cmd_sender.send(GuiCommands::Ready);
+            } else {
+                let _ = self.cmd_sender.send(GuiCommands::Unready);
+            }
+        }
     }
 
     fn draw_game(&self) {
