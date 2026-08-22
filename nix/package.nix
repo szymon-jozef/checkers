@@ -16,11 +16,26 @@
           # rustc
           # already provided by buildRustPackage :p
           pkg-config
+          makeWrapper
         ];
 
         # runtime deps
         buildInputs = with pkgs; [
+          wayland
+          wayland-protocols
+          libGL
+          alsa-lib
 
+          libX11.out
+          libXi.out
+          libXcursor.out
+          libXrandr.out
+          libxkbcommon.out
+          libxcb
+          libXinerama
+          libXxf86vm
+
+          fontconfig
         ];
 
         meta = {
