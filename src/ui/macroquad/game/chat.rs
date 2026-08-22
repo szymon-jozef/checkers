@@ -79,12 +79,22 @@ impl Chat {
 
         root_ui().push_skin(&chat_skin);
 
+        let mut prev_sender: &str = "";
+
         Group::new(hash!(), chat_size)
             .position(chat_pos)
             .ui(&mut root_ui(), |ui| {
                 for message in &self.messages {
-                    ui.label(None, &format!("[{}]", message.sender));
+                    if prev_sender != message.sender {
+                        if prev_sender != "" {
+                            // make space if it's not the first message
+                            ui.label(None, "");
+                        }
+                        ui.label(None, &format!("[{}]", message.sender));
+                    }
+
                     wrap_message(ui, &message.content, font_size, chat_size.x);
+                    prev_sender = &message.sender;
                 }
             });
 
