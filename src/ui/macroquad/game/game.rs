@@ -2,14 +2,11 @@ use tokio::sync::mpsc::{self, Sender};
 
 use log::{debug, error, info};
 use macroquad::{
-    color::{BLACK, GRAY, WHITE},
+    color::GRAY,
     input::{KeyCode, get_keys_pressed},
     math::{Rect, Vec2, vec2},
-    shapes::{draw_rectangle, draw_rectangle_lines},
-    ui::{
-        Ui, hash, root_ui,
-        widgets::{Checkbox, InputText},
-    },
+    shapes::draw_rectangle,
+    ui::{hash, root_ui, widgets::Checkbox},
     window::{screen_height, screen_width},
 };
 use tokio::sync::mpsc::{Receiver, error::TryRecvError::Disconnected};
@@ -20,7 +17,7 @@ use crate::{
         client::Client, message::ServerMessage, network_identity::NetworkIdentity,
         server::ServerStage,
     },
-    ui::state::GameContext,
+    ui::{macroquad::game::chat::Chat, state::GameContext},
 };
 
 pub struct GameClient {
@@ -49,19 +46,7 @@ struct Lobby {
     checkbox_size: Vec2,
 }
 
-struct Message {
-    sender: String,
-    content: String,
-}
-
-#[derive(Default)]
-struct Chat {
-    chat_area: Rect,
-    messages: Vec<Message>,
-    message_buffer: String,
-}
-
-enum GuiCommands {
+pub enum GuiCommands {
     Send(String),
 
     Ready,
@@ -160,7 +145,7 @@ impl GameClient {
                 self.draw_summary_screen();
             }
         }
-        self.draw_chat();
+        self.chat.draw();
     }
 
     fn draw_lobby(&mut self) {
@@ -202,35 +187,6 @@ impl GameClient {
         todo!();
     }
 
-    fn draw_chat(&mut self) {
-        draw_rectangle(
-            self.chat.chat_area.x,
-            self.chat.chat_area.y,
-            self.chat.chat_area.w,
-            self.chat.chat_area.h,
-            WHITE,
-        );
-
-        let input_size = vec2(self.chat.chat_area.w, self.chat.chat_area.h * 0.1);
-        let input_pos = vec2(self.chat.chat_area.x, self.chat.chat_area.h - input_size.y);
-
-        InputText::new(hash!())
-            .position(input_pos)
-            .size(input_size)
-            .ui(&mut root_ui(), &mut self.chat.message_buffer);
-
-        /*
-        draw_rectangle_lines(
-            input_pos.x,
-            input_pos.y,
-            input_size.x,
-            input_size.y,
-            1.5,
-            BLACK,
-        );
-        */
-    }
-
     /* === UPDATING STUFF ==== */
 
     pub fn update(&mut self) {
@@ -246,12 +202,10 @@ impl GameClient {
         for key in get_keys_pressed() {
             match key {
                 KeyCode::Enter => {
-                    if !self.chat.message_buffer.is_empty() {
-                        let _ = self // TODO! Check the message before sending
-                            .cmd_sender
-                            .try_send(GuiCommands::Send(self.chat.message_buffer.clone()));
-                        self.chat.message_buffer.clear();
-                    }
+                    self.chat.send_message(self.cmd_sender.clone()); // not sure about cloning this
+                    // every message sent. Maybe
+                    // Chat should have it's own
+                    // clone?
                 }
 
                 _ => {}
@@ -273,7 +227,7 @@ impl GameClient {
                 ServerMessage::BroadcastCurrentTurn { active_player } => todo!(),
                 ServerMessage::BroadCastTextMessage { sender, content } => {
                     debug!("Got message from: {} with content: {}", sender, content);
-                    self.chat.messages.push(Message { sender, content });
+                    self.chat.push_message(sender, content);
                 }
 
                 ServerMessage::GameEnd { result } => todo!(),
@@ -304,11 +258,6 @@ impl GameClient {
             h: screen_height(),
         };
 
-        self.chat.chat_area = Rect {
-            x: self.game_area.w,
-            y: 0.0,
-            w: screen_width() * 0.2,
-            h: screen_height(),
-        };
+        self.chat.update(&self.game_area);
     }
 }

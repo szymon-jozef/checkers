@@ -1,7 +1,7 @@
 use std::sync::mpsc::{self, Receiver, Sender};
 
 use crate::{
-    network::client::Client, super_advanced_ai::BotDificulty, ui::macroquad::game::GameClient,
+    network::client::Client, super_advanced_ai::BotDificulty, ui::macroquad::game::game::GameClient,
 };
 
 #[derive(Default)]
@@ -34,16 +34,6 @@ pub struct GameContext {
     pub difficulty: BotDificulty,
     pub gamemode: GameMode,
     pub server_url_buffer: String,
-}
-
-enum CliCommands {
-    Send,
-
-    Ready,
-    Unready,
-
-    Capture,
-    Move,
 }
 
 // TODO! Move this
