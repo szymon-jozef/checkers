@@ -1,4 +1,4 @@
-use std::sync::mpsc::{self, Sender};
+use tokio::sync::mpsc::{self, Sender};
 
 use log::{error, info};
 use macroquad::{
@@ -62,15 +62,15 @@ impl GameClient {
             return None;
         };
 
-        let (cmd_sender, cmd_recv) = mpsc::channel::<GuiCommands>();
+        let (cmd_sender, mut cmd_recv) = mpsc::channel::<GuiCommands>(10);
 
         std::thread::spawn(|| {
             let rt = tokio::runtime::Runtime::new().unwrap(); // i dont like this
 
-            rt.spawn(async move {
+            rt.block_on(async move {
                 loop {
-                    match cmd_recv.recv() {
-                        Ok(cmd) => match cmd {
+                    match cmd_recv.recv().await {
+                        Some(cmd) => match cmd {
                             GuiCommands::Send(content) => {
                                 client.send_text_message(content).await;
                             }
@@ -86,8 +86,8 @@ impl GameClient {
                             GuiCommands::Move => todo!(),
                         },
 
-                        Err(e) => {
-                            error!("Connection broken: {}", e);
+                        None => {
+                            error!("Connection with cmd thread broken");
                             return;
                         }
                     }
@@ -176,9 +176,10 @@ impl GameClient {
 
         if before_click != self.lobby.is_ready {
             if self.lobby.is_ready {
-                let _ = self.cmd_sender.send(GuiCommands::Ready);
+                let _ = self.cmd_sender.try_send(GuiCommands::Ready); // TODO! Maybe handle failure
+            // or something
             } else {
-                let _ = self.cmd_sender.send(GuiCommands::Unready);
+                let _ = self.cmd_sender.try_send(GuiCommands::Unready);
             }
         }
     }
