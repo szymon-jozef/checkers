@@ -227,7 +227,8 @@ impl GameClient {
             Ok(msg) => match msg {
                 ServerMessage::GameStart { identity } => {
                     info!("We go identity!");
-                    self.identity = Some(identity);
+                    self.identity = Some(identity.clone());
+                    self.board = Board::new(identity.id);
                     self.game_state = ServerStage::Game;
                 }
 
@@ -242,6 +243,7 @@ impl GameClient {
 
                 ServerMessage::BroadcastBoardState { board } => {
                     self.board.update_board_view(board);
+                    self.board.update_state();
                 }
 
                 ServerMessage::BroadcastCurrentTurn { active_player } => {

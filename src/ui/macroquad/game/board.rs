@@ -1,22 +1,31 @@
 use macroquad::{
-    color::{BLACK, GREEN, RED, WHITE},
+    color::{BLACK, Color, GREEN, RED, WHITE},
     input::{is_mouse_button_pressed, mouse_position},
-    math::{Rect, vec2},
+    math::{Circle, Rect, vec2},
     miniquad::window::high_dpi,
-    shapes::{draw_circle, draw_rectangle, draw_rectangle_ex},
+    shapes::{draw_circle, draw_circle_lines, draw_rectangle, draw_rectangle_ex},
 };
 use uuid::Uuid;
 
 use crate::logic::{
     board::{
         board_view::BoardView,
+        field::Field,
         pawn::{CapturePath, MovePath},
     },
     math::position::Position,
 };
 
+struct GuiField {
+    rect: Rect,
+    field: Field,
+    is_clickable: bool,
+    color: Color,
+}
+
 pub struct Board {
     board_view: BoardView,
+    fields: Vec<GuiField>,
 
     my_id: Uuid,
     current_highlight: Option<Position>,
@@ -35,6 +44,8 @@ impl Board {
     pub fn new(player_id: Uuid) -> Self {
         Self {
             board_view: BoardView::default(),
+            fields: vec![],
+
             my_id: player_id,
             current_highlight: None,
 
@@ -57,7 +68,9 @@ impl Board {
         self.available_captures = None;
     }
 
-    pub fn draw(&mut self) {
+    pub fn update_state(&mut self) {
+        self.fields.clear();
+
         let field_size = 32.0;
 
         for field in &self.board_view {
@@ -70,41 +83,58 @@ impl Board {
             let abs_x = pos.column as f32 * field_size;
             let abs_y = pos.row as f32 * field_size;
 
-            let (mouse_pos_x, mouse_pos_y) = mouse_position();
+            let rect = Rect {
+                x: abs_x,
+                y: abs_y,
+                w: field_size,
+                h: field_size,
+            };
 
-            if abs_x < mouse_pos_x
-                && mouse_pos_x <= abs_x + field_size
-                && abs_y < mouse_pos_y
-                && mouse_pos_y <= abs_y + field_size
-                && is_mouse_button_pressed(macroquad::input::MouseButton::Left)
-            {
-                self.current_highlight = Some(pos);
-            }
+            self.fields.push(GuiField {
+                rect,
+                field: field.clone(),
+                is_clickable: false,
+                color: if is_field_black { BLACK } else { WHITE },
+            });
+        }
+    }
 
-            if is_field_black {
-                draw_rectangle(abs_x, abs_y, field_size, field_size, BLACK);
-            } else {
-                draw_rectangle(abs_x, abs_y, field_size, field_size, WHITE);
-            }
+    pub fn draw(&self) {
+        for field in &self.fields {
+            draw_rectangle(
+                field.rect.x,
+                field.rect.y,
+                field.rect.w,
+                field.rect.h,
+                field.color,
+            );
 
-            if let Some(hihglith) = self.current_highlight {
-                let x = hihglith.column as f32 * field_size;
-                let y = hihglith.row as f32 * field_size;
-
-                draw_rectangle(x, y, field_size, field_size, GREEN);
-            }
-
-            if field.pawn.is_some() {
-                // draw something for now
-                draw_circle(
-                    abs_x + field_size * 0.5,
-                    abs_y + field_size * 0.5,
-                    16.0,
-                    RED,
+            if field.is_clickable {
+                draw_rectangle(
+                    field.rect.x,
+                    field.rect.y,
+                    field.rect.w,
+                    field.rect.h,
+                    GREEN,
                 );
+            }
+
+            if let Some(pawn) = &field.field.pawn {
+                let color = if pawn.owner == self.my_id { WHITE } else { RED }; // TODO! This should
+                // be customizable
+
+                let center = field.rect.center();
+
+                let r = field.rect.w * 0.5;
+                let thickness = 0.5;
+
+                draw_circle(center.x, center.y, r, color);
+                draw_circle_lines(center.x, center.y, r, thickness, BLACK);
             }
         }
     }
+
+    fn highligt_current_moves(&mut self) {}
 
     /*
     pub fn update_current_highlight(&mut self) {
