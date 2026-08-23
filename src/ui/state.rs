@@ -29,11 +29,21 @@ pub enum GameMode {
     },
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct GameContext {
     pub difficulty: BotDificulty,
     pub gamemode: GameMode,
     pub server_url_buffer: String,
+}
+
+impl Default for GameContext {
+    fn default() -> Self {
+        Self {
+            difficulty: BotDificulty::default(),
+            gamemode: GameMode::default(),
+            server_url_buffer: "127.0.0.1".to_string(),
+        }
+    }
 }
 
 // TODO! Move this

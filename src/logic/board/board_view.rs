@@ -31,6 +31,24 @@ impl Index<usize> for BoardView {
     }
 }
 
+impl IntoIterator for BoardView {
+    type Item = Field;
+    type IntoIter = std::vec::IntoIter<Field>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.board.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a BoardView {
+    type Item = &'a Field;
+    type IntoIter = std::slice::Iter<'a, Field>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.board.iter()
+    }
+}
+
 impl BoardView {
     pub fn to_string(&self, owner: &Uuid) -> String {
         (0..self.size)

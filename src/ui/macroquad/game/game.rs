@@ -1,3 +1,5 @@
+use std::convert::identity;
+
 use tokio::sync::mpsc::{self, Sender};
 
 use log::{debug, error, info};
@@ -17,7 +19,10 @@ use crate::{
         client::Client, message::ServerMessage, network_identity::NetworkIdentity,
         server::ServerStage,
     },
-    ui::{macroquad::game::chat::Chat, state::GameContext},
+    ui::{
+        macroquad::game::{board::Board, chat::Chat},
+        state::GameContext,
+    },
 };
 
 pub struct GameClient {
@@ -26,7 +31,8 @@ pub struct GameClient {
 
     identity: Option<NetworkIdentity>,
 
-    board: BoardView,
+    board: Board,
+    is_my_turn: bool,
     player_name: String,
     enemy_name: String, // TODO! Server should give this info to us (it doesn't rn)
 
@@ -95,7 +101,7 @@ impl GameClient {
             });
         });
 
-        let board = BoardView::default();
+        let board = Board::default();
 
         let game_stage = ServerStage::default();
         let mut lobby = Lobby::default();
@@ -118,6 +124,8 @@ impl GameClient {
 
             board,
             lobby,
+
+            is_my_turn: false,
 
             player_name: "Morbius".to_string(),
             enemy_name: "Milo".to_string(),
@@ -180,7 +188,7 @@ impl GameClient {
     }
 
     fn draw_game(&self) {
-        todo!();
+        self.board.draw();
     }
 
     fn draw_summary_screen(&self) {
@@ -195,7 +203,8 @@ impl GameClient {
 
         match self.game_state {
             ServerStage::Lobby => self.update_lobby(),
-            ServerStage::Game => todo!(),
+            ServerStage::Game => {}
+
             ServerStage::End => todo!(),
         }
 
@@ -219,18 +228,35 @@ impl GameClient {
                 ServerMessage::GameStart { identity } => {
                     info!("We go identity!");
                     self.identity = Some(identity);
+                    self.game_state = ServerStage::Game;
                 }
 
                 ServerMessage::AvailableCaptures { captures } => todo!(),
-                ServerMessage::AvailableMoves { moves } => todo!(),
-                ServerMessage::BroadcastBoardState { board } => todo!(),
-                ServerMessage::BroadcastCurrentTurn { active_player } => todo!(),
+                ServerMessage::AvailableMoves { moves } => {
+                    // TODO! Implement this (no todo to test drawing board!!)
+                }
+
+                ServerMessage::BroadcastBoardState { board } => {
+                    self.board = Board::from(board);
+                }
+
+                ServerMessage::BroadcastCurrentTurn { active_player } => {
+                    if let Some(identity) = &self.identity
+                        && identity.id == active_player
+                    {
+                        info!("It's out turn!");
+                        self.is_my_turn = true;
+                    }
+                }
+
                 ServerMessage::BroadCastTextMessage { sender, content } => {
                     debug!("Got message from: {} with content: {}", sender, content);
                     self.chat.push_message(sender, content);
                 }
 
-                ServerMessage::GameEnd { result } => todo!(),
+                ServerMessage::GameEnd { result } => {
+                    self.game_state = ServerStage::End;
+                }
 
                 _ => {} // ignore things that network client handled by itself
             },
