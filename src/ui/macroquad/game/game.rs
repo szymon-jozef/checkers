@@ -187,7 +187,7 @@ impl GameClient {
         }
     }
 
-    fn draw_game(&self) {
+    fn draw_game(&mut self) {
         self.board.draw();
     }
 
@@ -231,13 +231,17 @@ impl GameClient {
                     self.game_state = ServerStage::Game;
                 }
 
-                ServerMessage::AvailableCaptures { captures } => todo!(),
+                ServerMessage::AvailableCaptures { captures } => {
+                    self.board.update_available_captures(captures);
+                }
+
                 ServerMessage::AvailableMoves { moves } => {
                     // TODO! Implement this (no todo to test drawing board!!)
+                    self.board.update_available_moves(moves);
                 }
 
                 ServerMessage::BroadcastBoardState { board } => {
-                    self.board = Board::from(board);
+                    self.board.update_board_view(board);
                 }
 
                 ServerMessage::BroadcastCurrentTurn { active_player } => {
