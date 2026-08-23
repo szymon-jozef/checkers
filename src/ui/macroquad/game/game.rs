@@ -39,6 +39,8 @@ pub struct GameClient {
     game_state: ServerStage,
 
     game_area: Rect,
+    board_area: Rect,
+
     game_padding: f32,
 
     lobby: Lobby,
@@ -115,6 +117,8 @@ impl GameClient {
         };
         let game_padding = 25.0;
 
+        let board_area = Rect::default();
+
         let chat = Chat::default();
 
         Some(Self {
@@ -133,6 +137,8 @@ impl GameClient {
             game_state: game_stage,
 
             game_area,
+            board_area,
+
             game_padding,
 
             chat,
@@ -228,7 +234,7 @@ impl GameClient {
                 ServerMessage::GameStart { identity } => {
                     info!("We go identity!");
                     self.identity = Some(identity.clone());
-                    self.board = Board::new(identity.id);
+                    self.board = Board::new(self.board_area, identity.id);
                     self.game_state = ServerStage::Game;
                 }
 
@@ -291,5 +297,20 @@ impl GameClient {
         };
 
         self.chat.update(&self.game_area);
+
+        let w = self.game_area.w * 0.75;
+        let h = self.game_area.h * 0.75;
+        let side = w.min(h);
+
+        self.board_area = Rect {
+            x: self.game_area.w / 2.0 - (side / 2.0),
+            y: self.game_area.h / 2.0 - (side / 2.0),
+            w: side,
+            h: side,
+        };
+
+        if self.board.update_board_rect(self.board_area) {
+            self.board.update_state();
+        }
     }
 }

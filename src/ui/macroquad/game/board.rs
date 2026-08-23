@@ -19,16 +19,18 @@ use crate::logic::{
 struct GuiField {
     rect: Rect,
     field: Field,
+    pos: Position,
     is_clickable: bool,
     color: Color,
 }
 
 pub struct Board {
+    rect: Rect,
+
     board_view: BoardView,
     fields: Vec<GuiField>,
 
     my_id: Uuid,
-    current_highlight: Option<Position>,
 
     available_captures: Option<Vec<CapturePath>>,
     available_moves: Option<Vec<MovePath>>,
@@ -36,18 +38,19 @@ pub struct Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Self::new(Uuid::default())
+        Self::new(Rect::default(), Uuid::default())
     }
 }
 
 impl Board {
-    pub fn new(player_id: Uuid) -> Self {
+    pub fn new(rect: Rect, player_id: Uuid) -> Self {
         Self {
+            rect,
+
             board_view: BoardView::default(),
             fields: vec![],
 
             my_id: player_id,
-            current_highlight: None,
 
             available_captures: None,
             available_moves: None,
@@ -68,10 +71,19 @@ impl Board {
         self.available_captures = None;
     }
 
+    pub fn update_board_rect(&mut self, rect: Rect) -> bool {
+        if self.rect != rect {
+            self.rect = rect;
+            return true;
+        }
+
+        false
+    }
+
     pub fn update_state(&mut self) {
         self.fields.clear();
 
-        let field_size = 32.0;
+        let field_size = self.rect.w / self.board_view.size as f32;
 
         for field in &self.board_view {
             let pos: Position = field.position;
@@ -80,8 +92,8 @@ impl Board {
             let is_column_even: bool = pos.column % 2 == 0;
             let is_field_black: bool = is_row_even ^ is_column_even;
 
-            let abs_x = pos.column as f32 * field_size;
-            let abs_y = pos.row as f32 * field_size;
+            let abs_x = self.rect.x + pos.column as f32 * field_size;
+            let abs_y = self.rect.y + pos.row as f32 * field_size;
 
             let rect = Rect {
                 x: abs_x,
@@ -94,6 +106,7 @@ impl Board {
                 rect,
                 field: field.clone(),
                 is_clickable: false,
+                pos,
                 color: if is_field_black { BLACK } else { WHITE },
             });
         }
