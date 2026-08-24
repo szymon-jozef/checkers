@@ -209,7 +209,10 @@ impl GameClient {
 
         match self.game_state {
             ServerStage::Lobby => self.update_lobby(),
-            ServerStage::Game => {}
+
+            ServerStage::Game => {
+                self.board.update();
+            }
 
             ServerStage::End => todo!(),
         }

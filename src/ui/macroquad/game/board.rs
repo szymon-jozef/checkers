@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
 
+use log::info;
 use macroquad::{
     color::{BLACK, Color, GREEN, ORANGE, RED, WHITE},
     input::{is_mouse_button_pressed, mouse_position},
@@ -111,6 +112,12 @@ impl Board {
         }
     }
 
+    pub fn update(&mut self) {
+        if let Some(clicked_field) = self.get_clicked_field() {
+            info!("Field: {} was clicked!", clicked_field.pos);
+        }
+    }
+
     pub fn update_board_view(&mut self, board_view: BoardView) {
         self.board_view = board_view;
     }
@@ -200,6 +207,20 @@ impl Board {
                 draw_circle_lines(center.x, center.y, r, thickness, BLACK);
             }
         }
+    }
+
+    fn get_clicked_field(&self) -> Option<&GuiField> {
+        let (mouse_x, mouse_y) = mouse_position();
+        let mouse_point = vec2(mouse_x, mouse_y);
+
+        if is_mouse_button_pressed(macroquad::input::MouseButton::Left) {
+            for field in &self.fields {
+                if field.rect.contains(mouse_point) {
+                    return Some(field);
+                }
+            }
+        }
+        None
     }
 
     fn highlight_current_moves(&mut self) {
