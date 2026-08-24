@@ -79,11 +79,21 @@ impl IndexMut<Position> for GuiFieldVec {
     }
 }
 
+#[derive(Default)]
+enum BoardState {
+    #[default]
+    View,
+    ChoosePawn,
+    ChooseMove(Position),
+}
+
 pub struct Board {
     rect: Rect,
 
     board_view: BoardView,
     fields: GuiFieldVec,
+
+    state: BoardState,
 
     my_id: Uuid,
 
@@ -105,6 +115,8 @@ impl Board {
             board_view: BoardView::default(),
             fields: GuiFieldVec::default(),
 
+            state: BoardState::default(),
+
             my_id: player_id,
 
             available_captures: None,
@@ -113,8 +125,21 @@ impl Board {
     }
 
     pub fn update(&mut self) {
-        if let Some(clicked_field) = self.get_clicked_field() {
-            info!("Field: {} was clicked!", clicked_field.pos);
+        let clicked_field = self.get_clicked_field();
+
+        match self.state {
+            BoardState::View => {}
+
+            BoardState::ChoosePawn => {
+                if let Some(clicked_field) = clicked_field {
+                    self.state = BoardState::ChooseMove(clicked_field.pos);
+                }
+                self.highlight_current_moves();
+            }
+
+            BoardState::ChooseMove(from) => {
+                self.highlight_move_paths(from);
+            }
         }
     }
 
@@ -128,9 +153,10 @@ impl Board {
     }
 
     pub fn update_available_moves(&mut self, moves: Vec<MovePath>) {
+        self.state = BoardState::ChoosePawn;
+
         self.available_moves = Some(moves);
         self.available_captures = None;
-        self.highlight_current_moves();
     }
 
     pub fn update_board_rect(&mut self, rect: Rect) -> bool {
@@ -172,8 +198,6 @@ impl Board {
                 color: if is_field_black { BLACK } else { WHITE },
             });
         }
-
-        self.highlight_current_moves(); // we rehighlithg as changing dimensions will destroy this
     }
 
     pub fn draw(&self) {
@@ -226,11 +250,11 @@ impl Board {
     }
 
     fn highlight_current_moves(&mut self) {
-        let mut from: Vec<Position> = vec![];
-
         let Some(available_moves) = &self.available_moves else {
             return;
         };
+
+        let mut from: Vec<Position> = vec![];
 
         for available_move in available_moves {
             from.push(available_move.from);
@@ -238,6 +262,20 @@ impl Board {
 
         for pos in from {
             self.fields[pos].color = MOVE_HIGHLITGHT_COLOR;
+        }
+    }
+
+    fn highlight_move_paths(&mut self, from: Position) {
+        let Some(available_moves) = &self.available_moves else {
+            return;
+        };
+
+        for available_move in available_moves {
+            if available_move.from == from {
+                for step in &available_move.available_steps {
+                    self.fields[*step].color = MOVE_HIGHLITGHT_COLOR;
+                }
+            }
         }
     }
 }
