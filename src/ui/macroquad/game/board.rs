@@ -1,5 +1,7 @@
+use std::ops::{Index, IndexMut};
+
 use macroquad::{
-    color::{BLACK, Color, GREEN, RED, WHITE},
+    color::{BLACK, Color, GREEN, ORANGE, RED, WHITE},
     input::{is_mouse_button_pressed, mouse_position},
     math::{Circle, Rect, vec2},
     miniquad::window::high_dpi,
@@ -16,6 +18,10 @@ use crate::logic::{
     math::position::Position,
 };
 
+const MOVE_HIGHLITGHT_COLOR: Color = GREEN;
+const CAPTURE_HIGHLITGHT_COLOR: Color = ORANGE;
+
+#[derive(Default)]
 struct GuiField {
     rect: Rect,
     field: Field,
@@ -24,11 +30,59 @@ struct GuiField {
     color: Color,
 }
 
+#[derive(Default)]
+struct GuiFieldVec {
+    gui_fields: Vec<GuiField>,
+}
+
+impl GuiFieldVec {
+    pub fn push(&mut self, input: GuiField) {
+        self.gui_fields.push(input);
+    }
+
+    pub fn clear(&mut self) {
+        self.gui_fields.clear();
+    }
+
+    pub fn size(&self) -> usize {
+        self.gui_fields.len()
+    }
+}
+
+impl<'a> IntoIterator for &'a GuiFieldVec {
+    type Item = &'a GuiField;
+    type IntoIter = std::slice::Iter<'a, GuiField>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.gui_fields.iter()
+    }
+}
+
+impl Index<Position> for GuiFieldVec {
+    type Output = GuiField;
+
+    fn index(&self, index: Position) -> &Self::Output {
+        self.gui_fields
+            .iter()
+            .find(|field| field.pos == index)
+            .unwrap()
+    }
+}
+
+impl IndexMut<Position> for GuiFieldVec {
+    fn index_mut(&mut self, index: Position) -> &mut Self::Output {
+        self.gui_fields
+            .iter_mut()
+            .find(|field| field.pos == index)
+            .unwrap()
+    }
+}
+
 pub struct Board {
     rect: Rect,
 
     board_view: BoardView,
-    fields: Vec<GuiField>,
+    fields: GuiFieldVec,
 
     my_id: Uuid,
 
@@ -48,7 +102,7 @@ impl Board {
             rect,
 
             board_view: BoardView::default(),
-            fields: vec![],
+            fields: GuiFieldVec::default(),
 
             my_id: player_id,
 
@@ -69,6 +123,7 @@ impl Board {
     pub fn update_available_moves(&mut self, moves: Vec<MovePath>) {
         self.available_moves = Some(moves);
         self.available_captures = None;
+        self.highlight_current_moves();
     }
 
     pub fn update_board_rect(&mut self, rect: Rect) -> bool {
@@ -147,13 +202,19 @@ impl Board {
         }
     }
 
-    fn highligt_current_moves(&mut self) {}
+    fn highlight_current_moves(&mut self) {
+        let mut from: Vec<Position> = vec![];
 
-    /*
-    pub fn update_current_highlight(&mut self) {
-        let (mut mouse_pos_x, mut mouse_pos_y) = mouse_position();
-        mouse_pos_x /= self.board_view.size as f32;
-        mouse_pos_y /= self.board_view.size as f32;
+        let Some(available_moves) = &self.available_moves else {
+            return;
+        };
+
+        for available_move in available_moves {
+            from.push(available_move.from);
+        }
+
+        for pos in from {
+            self.fields[pos].color = MOVE_HIGHLITGHT_COLOR;
+        }
     }
-    */
 }

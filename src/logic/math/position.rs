@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::logic::math::vector::Vector2D;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize, Default)]
 /// Position on the board. Consists of row and column. Should be treated like a point in space on
 /// unsigned grid.
 ///
