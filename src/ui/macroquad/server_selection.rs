@@ -1,3 +1,5 @@
+use std::sync::mpsc;
+
 use macroquad::{
     color::GRAY,
     math::vec2,
@@ -11,7 +13,7 @@ use crate::ui::{
     state::{
         GameContext,
         GuiState::{self},
-        connect_to_server,
+        connect_to_server, run_server,
     },
 };
 
@@ -32,6 +34,15 @@ pub async fn draw_server_selection(state: &mut GuiState, context: &mut GameConte
             menu_builder.label(ui, "Host");
             if menu_builder.button(ui, "Start") {
                 context.gamemode = crate::ui::state::GameMode::Multiplayer { is_hosting: true };
+
+                let (tx, rx) = mpsc::channel();
+                run_server(tx);
+
+                let result = rx.recv();
+
+                if let Ok(result) = result {
+                    *state = GuiState::Connecting(connect_to_server());
+                }
             }
 
             menu_builder.label(ui, "Server selection");
