@@ -142,7 +142,7 @@ impl Board {
         false
     }
 
-    pub fn update_state(&mut self) {
+    pub fn update_dimensions(&mut self) {
         self.fields.clear();
 
         let field_size = self.rect.w / self.board_view.size as f32;
@@ -172,6 +172,8 @@ impl Board {
                 color: if is_field_black { BLACK } else { WHITE },
             });
         }
+
+        self.highlight_current_moves(); // we rehighlithg as changing dimensions will destroy this
     }
 
     pub fn draw(&self) {

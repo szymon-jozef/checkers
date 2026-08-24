@@ -252,7 +252,7 @@ impl GameClient {
 
                 ServerMessage::BroadcastBoardState { board } => {
                     self.board.update_board_view(board);
-                    self.board.update_state();
+                    self.board.update_dimensions();
                 }
 
                 ServerMessage::BroadcastCurrentTurn { active_player } => {
@@ -313,7 +313,7 @@ impl GameClient {
         };
 
         if self.board.update_board_rect(self.board_area) {
-            self.board.update_state();
+            self.board.update_dimensions();
         }
     }
 }
