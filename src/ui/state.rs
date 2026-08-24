@@ -1,7 +1,9 @@
 use std::sync::mpsc::{self, Receiver, Sender};
 
 use crate::{
-    network::client::Client, super_advanced_ai::BotDificulty, ui::macroquad::game::game::GameClient,
+    network::{client::Client, server::Server},
+    super_advanced_ai::{Bot, BotDificulty},
+    ui::macroquad::game::game::GameClient,
 };
 
 #[derive(Default)]
@@ -61,4 +63,27 @@ pub fn connect_to_server() -> Receiver<Option<Client>> {
     });
 
     rc
+}
+
+pub fn run_server(sender: Sender<()>) {
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        let mut server = rt.block_on(Server::new());
+        let _ = rt.block_on(server.start());
+
+        let _ = sender.send(());
+
+        rt.block_on(server.update());
+    });
+}
+
+pub fn connect_bot(dificluty: BotDificulty) {
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        let bot = rt.block_on(Bot::new(dificluty));
+
+        rt.block_on(bot.game_loop());
+    });
 }

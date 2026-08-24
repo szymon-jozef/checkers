@@ -1,3 +1,5 @@
+use std::sync::mpsc;
+
 use macroquad::{
     color::GRAY,
     math::vec2,
@@ -6,12 +8,18 @@ use macroquad::{
     window::{next_frame, screen_height, screen_width},
 };
 
-use crate::ui::{
-    macroquad::menu_builder::MenuBuilder,
-    state::{
-        GameContext,
-        GuiState::{self},
-        connect_to_server,
+use crate::{
+    settings::{
+        client_settings::ClientSettings,
+        general_settings::{DEFAULT_URL, SettingsLike},
+    },
+    ui::{
+        macroquad::menu_builder::MenuBuilder,
+        state::{
+            GameContext,
+            GuiState::{self},
+            connect_bot, connect_to_server, run_server,
+        },
     },
 };
 
@@ -35,21 +43,38 @@ pub async fn draw_dificulty_selection(state: &mut GuiState, context: &mut GameCo
 
             if menu_builder.button(ui, "Easy") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Easy;
-                *state = GuiState::Connecting(connect_to_server());
+                start_single(state, context);
             }
 
             if menu_builder.button(ui, "Medium") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Normal;
-                *state = GuiState::Connecting(connect_to_server());
+                start_single(state, context);
             }
 
             if menu_builder.button(ui, "Hard") {
                 context.difficulty = crate::super_advanced_ai::BotDificulty::Hard;
-                *state = GuiState::Connecting(connect_to_server());
+                start_single(state, context);
             }
 
             if menu_builder.button(ui, "Go back") {
                 *state = GuiState::ModeSelection;
             }
         });
+}
+
+fn start_single(state: &mut GuiState, context: &GameContext) {
+    let mut client_settings = ClientSettings::new();
+    client_settings.server_url = DEFAULT_URL; // we overwrite server_url since we connect locally
+
+    let (tx, rx) = mpsc::channel();
+
+    run_server(tx);
+
+    let result = rx.recv();
+
+    if let Ok(result) = result {
+        connect_bot(context.difficulty);
+    }
+
+    *state = GuiState::Connecting(connect_to_server());
 }
