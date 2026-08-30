@@ -1,4 +1,7 @@
-use std::ops::{Index, IndexMut};
+use std::{
+    ops::{Index, IndexMut},
+    slice::IterMut,
+};
 
 use log::info;
 use macroquad::{
@@ -29,6 +32,7 @@ struct GuiField {
     pos: Position,
     is_clickable: bool,
     color: Color,
+    is_blac: bool,
 }
 
 #[derive(Default)]
@@ -59,6 +63,15 @@ impl<'a> IntoIterator for &'a GuiFieldVec {
     }
 }
 
+impl<'a> IntoIterator for &'a mut GuiFieldVec {
+    type Item = &'a mut GuiField;
+    type IntoIter = IterMut<'a, GuiField>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.gui_fields.iter_mut()
+    }
+}
+
 impl Index<Position> for GuiFieldVec {
     type Output = GuiField;
 
@@ -85,6 +98,7 @@ enum BoardState {
     View,
     ChoosePawn,
     ChooseMove(Position),
+    ChooseCapture(Position),
 }
 
 pub struct Board {
@@ -99,6 +113,8 @@ pub struct Board {
 
     available_captures: Option<Vec<CapturePath>>,
     available_moves: Option<Vec<MovePath>>,
+
+    field_size: f32,
 }
 
 impl Default for Board {
@@ -121,10 +137,15 @@ impl Board {
 
             available_captures: None,
             available_moves: None,
+
+            field_size: 32.0,
         }
     }
 
     pub fn update(&mut self) {
+        self.update_dimensions();
+        self.reset_color();
+
         let clicked_field = self.get_clicked_field();
 
         match self.state {
@@ -140,6 +161,8 @@ impl Board {
             BoardState::ChooseMove(from) => {
                 self.highlight_move_paths(from);
             }
+
+            BoardState::ChooseCapture(from) => {}
         }
     }
 
@@ -168,10 +191,11 @@ impl Board {
         false
     }
 
-    pub fn update_dimensions(&mut self) {
+    /// Recreate fields vec with new dimensions. Should be used when new board_view arrives
+    pub fn repopulate(&mut self) {
         self.fields.clear();
 
-        let field_size = self.rect.w / self.board_view.size as f32;
+        self.field_size = self.rect.w / self.board_view.size as f32;
 
         for field in &self.board_view {
             let pos: Position = field.position;
@@ -180,14 +204,14 @@ impl Board {
             let is_column_even: bool = pos.column % 2 == 0;
             let is_field_black: bool = is_row_even ^ is_column_even;
 
-            let abs_x = self.rect.x + pos.column as f32 * field_size;
-            let abs_y = self.rect.y + pos.row as f32 * field_size;
+            let abs_x = self.rect.x + pos.column as f32 * self.field_size;
+            let abs_y = self.rect.y + pos.row as f32 * self.field_size;
 
             let rect = Rect {
                 x: abs_x,
                 y: abs_y,
-                w: field_size,
-                h: field_size,
+                w: self.field_size,
+                h: self.field_size,
             };
 
             self.fields.push(GuiField {
@@ -196,7 +220,33 @@ impl Board {
                 is_clickable: false,
                 pos,
                 color: if is_field_black { BLACK } else { WHITE },
+                is_blac: is_field_black,
             });
+        }
+    }
+
+    /// Updates dimensions of graphical squares
+    pub fn update_dimensions(&mut self) {
+        for field in &mut self.fields {
+            let pos: Position = field.pos;
+
+            let abs_x = self.rect.x + pos.column as f32 * self.field_size;
+            let abs_y = self.rect.y + pos.row as f32 * self.field_size;
+
+            let new_rect = Rect {
+                x: abs_x,
+                y: abs_y,
+                w: self.field_size,
+                h: self.field_size,
+            };
+
+            field.rect = new_rect;
+        }
+    }
+
+    fn reset_color(&mut self) {
+        for field in &mut self.fields {
+            field.color = if field.is_blac { BLACK } else { WHITE };
         }
     }
 
