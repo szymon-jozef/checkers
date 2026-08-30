@@ -113,7 +113,10 @@ pub struct Board {
     is_my_turn: bool,
 
     available_captures: Option<Vec<CapturePath>>,
+    choosen_capture: Option<CapturePath>,
+
     available_moves: Option<Vec<MovePath>>,
+    choosen_move: Option<MovePath>,
 
     field_size: f32,
 }
@@ -138,7 +141,10 @@ impl Board {
             is_my_turn: false,
 
             available_captures: None,
+            choosen_capture: None,
+
             available_moves: None,
+            choosen_move: None,
 
             field_size: 32.0,
         }
@@ -175,6 +181,20 @@ impl Board {
                 }
 
                 self.highlight_move_paths(from);
+
+                if let Some(field) = &self.get_clicked_field() {
+                    if let Some(available_moves) = &self.available_moves {
+                        if available_moves.iter().any(|available_move| {
+                            available_move.from == from
+                                && available_move.available_steps.contains(&field.pos)
+                        }) {
+                            self.choosen_move = Some(MovePath {
+                                from,
+                                available_steps: vec![field.pos],
+                            });
+                        }
+                    }
+                }
             }
 
             BoardState::ChooseCapture(from) => {
@@ -199,6 +219,14 @@ impl Board {
             self.state = BoardState::ChooseMove(from);
             return;
         }
+    }
+
+    pub fn get_choosen_capture(&mut self) -> Option<CapturePath> {
+        self.choosen_capture.take()
+    }
+
+    pub fn get_choosen_move(&mut self) -> Option<MovePath> {
+        self.choosen_move.take()
     }
 
     pub fn update_board_view(&mut self, board_view: BoardView) {

@@ -14,7 +14,10 @@ use macroquad::{
 use tokio::sync::mpsc::{Receiver, error::TryRecvError::Disconnected};
 
 use crate::{
-    logic::board::board_view::BoardView,
+    logic::board::{
+        board_view::BoardView,
+        pawn::{CapturePath, MovePath},
+    },
     network::{
         client::Client, message::ServerMessage, network_identity::NetworkIdentity,
         server::ServerStage,
@@ -60,8 +63,8 @@ pub enum GuiCommands {
     Ready,
     Unready,
 
-    Capture,
-    Move,
+    Capture(CapturePath),
+    Move(MovePath),
 }
 
 impl GameClient {
@@ -90,8 +93,13 @@ impl GameClient {
                             GuiCommands::Unready => {
                                 client.revoke_readiness().await;
                             }
-                            GuiCommands::Capture => todo!(),
-                            GuiCommands::Move => todo!(),
+                            GuiCommands::Capture(capture_path) => todo!(),
+
+                            GuiCommands::Move(move_path) => {
+                                client
+                                    .send_move(move_path.from, move_path.available_steps[0])
+                                    .await; // ugly
+                            }
                         },
 
                         None => {
@@ -228,6 +236,14 @@ impl GameClient {
 
                 _ => {}
             }
+        }
+
+        if let Some(capture_path) = self.board.get_choosen_capture() {
+            let _ = self.cmd_sender.try_send(GuiCommands::Capture(capture_path));
+        }
+
+        if let Some(move_path) = self.board.get_choosen_move() {
+            let _ = self.cmd_sender.try_send(GuiCommands::Move(move_path));
         }
     }
 
