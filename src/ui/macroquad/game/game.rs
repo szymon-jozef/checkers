@@ -261,7 +261,11 @@ impl GameClient {
                     {
                         info!("It's out turn!");
                         self.is_my_turn = true;
+                    } else {
+                        self.is_my_turn = false;
                     }
+
+                    self.board.set_my_turn(self.is_my_turn);
                 }
 
                 ServerMessage::BroadCastTextMessage { sender, content } => {

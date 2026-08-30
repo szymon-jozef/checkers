@@ -110,6 +110,7 @@ pub struct Board {
     state: BoardState,
 
     my_id: Uuid,
+    is_my_turn: bool,
 
     available_captures: Option<Vec<CapturePath>>,
     available_moves: Option<Vec<MovePath>>,
@@ -134,6 +135,7 @@ impl Board {
             state: BoardState::default(),
 
             my_id: player_id,
+            is_my_turn: false,
 
             available_captures: None,
             available_moves: None,
@@ -149,20 +151,53 @@ impl Board {
         let clicked_field = self.get_clicked_field();
 
         match self.state {
-            BoardState::View => {}
+            BoardState::View => {
+                if self.is_my_turn {
+                    self.state = BoardState::ChoosePawn;
+                }
+            }
 
             BoardState::ChoosePawn => {
                 if let Some(clicked_field) = clicked_field {
-                    self.state = BoardState::ChooseMove(clicked_field.pos);
+                    self.delegate_move(clicked_field.pos);
                 }
+
+                if self.is_back_move_wanted_by_player() {
+                    self.state = BoardState::View;
+                }
+
                 self.highlight_current_moves();
             }
 
             BoardState::ChooseMove(from) => {
+                if self.is_back_move_wanted_by_player() {
+                    self.state = BoardState::ChoosePawn;
+                }
+
                 self.highlight_move_paths(from);
             }
 
-            BoardState::ChooseCapture(from) => {}
+            BoardState::ChooseCapture(from) => {
+                if self.is_back_move_wanted_by_player() {
+                    self.state = BoardState::ChoosePawn;
+                }
+            }
+        }
+    }
+
+    fn delegate_move(&mut self, from: Position) {
+        if let Some(capture_path) = &self.available_captures
+            && capture_path.iter().any(|path| path.from == from)
+        {
+            self.state = BoardState::ChooseCapture(from);
+            return;
+        }
+
+        if let Some(available_moves) = &self.available_moves
+            && available_moves.iter().any(|path| path.from == from)
+        {
+            self.state = BoardState::ChooseMove(from);
+            return;
         }
     }
 
@@ -297,6 +332,14 @@ impl Board {
             }
         }
         None
+    }
+
+    fn is_back_move_wanted_by_player(&self) -> bool {
+        is_mouse_button_pressed(macroquad::input::MouseButton::Right)
+    }
+
+    pub fn set_my_turn(&mut self, is_my_turn: bool) {
+        self.is_my_turn = is_my_turn;
     }
 
     fn highlight_current_moves(&mut self) {
