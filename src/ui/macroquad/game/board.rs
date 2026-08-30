@@ -3,7 +3,7 @@ use std::{
     slice::IterMut,
 };
 
-use log::info;
+use log::{debug, info};
 use macroquad::{
     color::{BLACK, Color, GREEN, ORANGE, RED, WHITE},
     input::{is_mouse_button_pressed, mouse_position},

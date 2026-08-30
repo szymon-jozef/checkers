@@ -317,7 +317,7 @@ impl GameClient {
         };
 
         if self.board.update_board_rect(self.board_area) {
-            self.board.update_dimensions();
+            self.board.repopulate();
         }
     }
 }
