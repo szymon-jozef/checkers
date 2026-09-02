@@ -3,13 +3,12 @@ use std::{
     slice::IterMut,
 };
 
-use log::{debug, info};
+use log::debug;
 use macroquad::{
-    color::{BLACK, Color, GREEN, ORANGE, RED, WHITE},
+    color::{BLACK, Color, GREEN, RED, WHITE},
     input::{is_mouse_button_pressed, mouse_position},
-    math::{Circle, Rect, vec2},
-    miniquad::window::high_dpi,
-    shapes::{draw_circle, draw_circle_lines, draw_rectangle, draw_rectangle_ex},
+    math::{Rect, vec2},
+    shapes::{draw_circle, draw_circle_lines, draw_rectangle},
 };
 use uuid::Uuid;
 
@@ -23,7 +22,7 @@ use crate::logic::{
 };
 
 const MOVE_HIGHLITGHT_COLOR: Color = GREEN;
-const CAPTURE_HIGHLITGHT_COLOR: Color = ORANGE;
+const CAPTURE_HIGHLITGHT_COLOR: Color = RED;
 
 #[derive(Default)]
 struct GuiField {
@@ -92,7 +91,7 @@ impl IndexMut<Position> for GuiFieldVec {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 enum BoardState {
     #[default]
     View,
@@ -160,6 +159,8 @@ impl Board {
 
         let clicked_field = self.get_clicked_field();
 
+        debug!("Current state: {:?}", self.state);
+
         match self.state {
             BoardState::View => {
                 if self.is_my_turn {
@@ -196,6 +197,7 @@ impl Board {
                                 from,
                                 available_steps: vec![field.pos],
                             });
+                            self.state = BoardState::View;
                         }
                     }
                 }
@@ -203,10 +205,7 @@ impl Board {
 
             BoardState::ChooseCapture(from) => {
                 if self.is_back_move_wanted_by_player() {
-                    debug!("Going back");
-                    self.current_capture_path.clear();
-                    self.current_deepness = 0;
-                    self.state = BoardState::ChoosePawn;
+                    self.reset_capture();
                     return;
                 }
 
@@ -255,14 +254,18 @@ impl Board {
                         })
                         .cloned();
 
-                    self.current_capture_path.clear();
-                    self.current_deepness = 0;
-                    self.state = BoardState::View;
+                    self.reset_capture();
                 }
 
                 self.highlight_capture_path(current_highlight);
             }
         }
+    }
+
+    fn reset_capture(&mut self) {
+        self.current_capture_path.clear();
+        self.current_deepness = 0;
+        self.state = BoardState::View;
     }
 
     fn delegate_move(&mut self, from: Position) {
@@ -432,26 +435,22 @@ impl Board {
         self.is_my_turn = is_my_turn;
     }
 
-    fn highlight_capture_path(&mut self, fields: Vec<Position>) {
-        for field in fields {
-            self.fields[field].color = CAPTURE_HIGHLITGHT_COLOR;
-        }
-    }
-
     fn highlight_current_moves(&mut self) {
-        let Some(available_moves) = &self.available_moves else {
+        if let Some(available_captures) = &self.available_captures {
+            for capture_path in available_captures {
+                self.fields[capture_path.from].color = MOVE_HIGHLITGHT_COLOR;
+            }
+
+            return;
+        }
+
+        if let Some(available_moves) = &self.available_moves {
+            for available_move in available_moves {
+                self.fields[available_move.from].color = MOVE_HIGHLITGHT_COLOR;
+            }
+
             return;
         };
-
-        let mut from: Vec<Position> = vec![];
-
-        for available_move in available_moves {
-            from.push(available_move.from);
-        }
-
-        for pos in from {
-            self.fields[pos].color = MOVE_HIGHLITGHT_COLOR;
-        }
     }
 
     fn highlight_move_paths(&mut self, from: Position) {
@@ -465,6 +464,12 @@ impl Board {
                     self.fields[*step].color = MOVE_HIGHLITGHT_COLOR;
                 }
             }
+        }
+    }
+
+    fn highlight_capture_path(&mut self, fields: Vec<Position>) {
+        for field in fields {
+            self.fields[field].color = CAPTURE_HIGHLITGHT_COLOR;
         }
     }
 }
