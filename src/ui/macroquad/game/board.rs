@@ -290,6 +290,8 @@ impl Board {
 
     /// Updates dimensions of graphical squares
     pub fn update_dimensions(&mut self) {
+        self.field_size = self.rect.w / self.board_view.size as f32;
+
         for field in &mut self.fields {
             let pos: Position = field.pos;
 
