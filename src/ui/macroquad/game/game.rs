@@ -1,5 +1,3 @@
-use std::convert::identity;
-
 use tokio::sync::mpsc::{self, Sender};
 
 use log::{debug, error, info};

@@ -5,7 +5,7 @@ use std::{
 
 use log::debug;
 use macroquad::{
-    color::{BLACK, Color, GREEN, RED, WHITE},
+    color::{BLACK, Color, GREEN, RED, WHITE, YELLOW},
     input::{is_mouse_button_pressed, mouse_position},
     math::{Rect, vec2},
     shapes::{draw_circle, draw_circle_lines, draw_rectangle},
@@ -158,8 +158,6 @@ impl Board {
         self.reset_color();
 
         let clicked_field = self.get_clicked_field();
-
-        debug!("Current state: {:?}", self.state);
 
         match self.state {
             BoardState::View => {
@@ -408,7 +406,14 @@ impl Board {
                 let thickness = 0.5;
 
                 draw_circle(center.x, center.y, r, color);
-                draw_circle_lines(center.x, center.y, r, thickness, BLACK);
+                match pawn.state {
+                    crate::logic::board::pawn::PawnState::Man => {
+                        draw_circle_lines(center.x, center.y, r, thickness, BLACK);
+                    }
+                    crate::logic::board::pawn::PawnState::Dame => {
+                        draw_circle_lines(center.x, center.y, r, thickness, YELLOW);
+                    }
+                }
             }
         }
     }
