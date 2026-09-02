@@ -93,7 +93,9 @@ impl GameClient {
                             GuiCommands::Unready => {
                                 client.revoke_readiness().await;
                             }
-                            GuiCommands::Capture(capture_path) => todo!(),
+                            GuiCommands::Capture(capture_path) => {
+                                client.send_capture(capture_path).await;
+                            }
 
                             GuiCommands::Move(move_path) => {
                                 client
@@ -262,7 +264,6 @@ impl GameClient {
                 }
 
                 ServerMessage::AvailableMoves { moves } => {
-                    // TODO! Implement this (no todo to test drawing board!!)
                     self.board.update_available_moves(moves);
                 }
 

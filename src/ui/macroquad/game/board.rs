@@ -113,6 +113,8 @@ pub struct Board {
     is_my_turn: bool,
 
     available_captures: Option<Vec<CapturePath>>,
+    current_deepness: usize,
+    current_capture_path: Vec<Position>,
     choosen_capture: Option<CapturePath>,
 
     available_moves: Option<Vec<MovePath>>,
@@ -141,6 +143,8 @@ impl Board {
             is_my_turn: false,
 
             available_captures: None,
+            current_capture_path: vec![],
+            current_deepness: 0,
             choosen_capture: None,
 
             available_moves: None,
@@ -199,8 +203,64 @@ impl Board {
 
             BoardState::ChooseCapture(from) => {
                 if self.is_back_move_wanted_by_player() {
+                    debug!("Going back");
+                    self.current_capture_path.clear();
+                    self.current_deepness = 0;
                     self.state = BoardState::ChoosePawn;
+                    return;
                 }
+
+                let Some(available_captures) = &self.available_captures else {
+                    return;
+                };
+
+                let possible_moves: Vec<_> = available_captures
+                    .iter()
+                    .filter_map(|capture| {
+                        if capture.from == from
+                            && capture.steps.starts_with(&self.current_capture_path)
+                        {
+                            Some(&capture.steps)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                let current_highlight: Vec<_> = possible_moves
+                    .iter()
+                    .filter_map(|possible_move| possible_move.get(self.current_deepness))
+                    .copied()
+                    .collect();
+
+                if let Some(clicked_field) = &self.get_clicked_field().map(|field| field.pos) {
+                    if possible_moves.iter().any(|possible_move| {
+                        if let Some(valid_move) = possible_move.get(self.current_deepness) {
+                            valid_move == clicked_field
+                        } else {
+                            false
+                        }
+                    }) {
+                        self.current_capture_path.push(*clicked_field);
+                        self.current_deepness += 1;
+                    }
+                }
+
+                if current_highlight.is_empty() {
+                    debug!("Capture path complete!");
+                    self.choosen_capture = available_captures
+                        .iter()
+                        .find(|capture| {
+                            capture.from == from && capture.steps == self.current_capture_path
+                        })
+                        .cloned();
+
+                    self.current_capture_path.clear();
+                    self.current_deepness = 0;
+                    self.state = BoardState::View;
+                }
+
+                self.highlight_capture_path(current_highlight);
             }
         }
     }
@@ -370,6 +430,12 @@ impl Board {
 
     pub fn set_my_turn(&mut self, is_my_turn: bool) {
         self.is_my_turn = is_my_turn;
+    }
+
+    fn highlight_capture_path(&mut self, fields: Vec<Position>) {
+        for field in fields {
+            self.fields[field].color = CAPTURE_HIGHLITGHT_COLOR;
+        }
     }
 
     fn highlight_current_moves(&mut self) {
