@@ -24,8 +24,8 @@ impl MenuBuilder {
         }
     }
 
-    pub fn text_input(&mut self, ui: &mut Ui, buffer: &mut String) {
-        InputText::new(hash!())
+    pub fn text_input(&mut self, ui: &mut Ui, id: &str, buffer: &mut String) {
+        InputText::new(hash!(id))
             .position(vec2(self.center_x, self.current_y))
             .size(self.button_size)
             .ui(ui, buffer);

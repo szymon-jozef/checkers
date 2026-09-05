@@ -36,6 +36,8 @@ pub struct GameContext {
     pub difficulty: BotDificulty,
     pub gamemode: GameMode,
     pub server_url_buffer: String,
+
+    pub latest_error_message: Option<String>,
 }
 
 impl Default for GameContext {
@@ -43,7 +45,8 @@ impl Default for GameContext {
         Self {
             difficulty: BotDificulty::default(),
             gamemode: GameMode::default(),
-            server_url_buffer: "127.0.0.1".to_string(),
+            server_url_buffer: "127.0.0.1:6767".to_string(),
+            latest_error_message: None,
         }
     }
 }

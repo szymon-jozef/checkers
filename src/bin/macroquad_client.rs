@@ -1,10 +1,16 @@
-use checkers::ui::{
-    macroquad::{
-        difficulty_selection::draw_dificulty_selection, game::game::GameClient,
-        main_menu::draw_main_menu, mode_selection::draw_mode_selection,
-        server_selection::draw_server_selection, settings::draw_settings,
+use checkers::{
+    settings::{
+        client_settings::ClientSettings, general_settings::SettingsLike,
+        server_settings::ServerSettings,
     },
-    state::{GameContext, GuiState},
+    ui::{
+        macroquad::{
+            difficulty_selection::draw_dificulty_selection, game::game::GameClient,
+            main_menu::draw_main_menu, mode_selection::draw_mode_selection,
+            server_selection::draw_server_selection, settings::draw_settings,
+        },
+        state::{GameContext, GuiState},
+    },
 };
 use macroquad::{
     color::{BLACK, WHITE},
@@ -61,6 +67,9 @@ pub async fn main() {
 
     let mut state = Default::default();
     let mut context = GameContext::default();
+
+    let mut client_settings = ClientSettings::new();
+    let mut server_settings = ServerSettings::new();
 
     let background = load_texture("assets/background.png").await.unwrap();
 
@@ -121,7 +130,13 @@ pub async fn main() {
             }
 
             GuiState::Settings => {
-                draw_settings(&mut state).await;
+                draw_settings(
+                    &mut state,
+                    &mut context,
+                    &mut client_settings,
+                    &mut server_settings,
+                )
+                .await;
             }
 
             GuiState::Game(client) => {

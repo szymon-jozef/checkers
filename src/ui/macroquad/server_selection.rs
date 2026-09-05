@@ -47,7 +47,7 @@ pub async fn draw_server_selection(state: &mut GuiState, context: &mut GameConte
 
             menu_builder.label(ui, "Server selection");
 
-            menu_builder.text_input(ui, &mut context.server_url_buffer);
+            menu_builder.text_input(ui, "server url", &mut context.server_url_buffer);
             //context.normalise_url();
 
             if menu_builder.button(ui, "Connect") {
