@@ -6,7 +6,10 @@ use macroquad::{
     input::{KeyCode, get_keys_pressed},
     math::{Rect, Vec2, vec2},
     shapes::draw_rectangle,
-    ui::{hash, root_ui, widgets::Checkbox},
+    ui::{
+        hash, root_ui,
+        widgets::{Checkbox, Group},
+    },
     window::{screen_height, screen_width},
 };
 use tokio::sync::mpsc::{Receiver, error::TryRecvError::Disconnected};
@@ -18,7 +21,10 @@ use crate::{
         server::ServerStage,
     },
     ui::{
-        macroquad::game::{board::Board, chat::Chat},
+        macroquad::{
+            game::{board::Board, chat::Chat},
+            menu_builder::MenuBuilder,
+        },
         state::GameContext,
     },
 };
@@ -31,18 +37,17 @@ pub struct GameClient {
 
     board: Board,
     is_my_turn: bool,
-    player_name: String,
-    enemy_name: String, // TODO! Server should give this info to us (it doesn't rn)
 
     game_state: ServerStage,
 
     game_area: Rect,
     board_area: Rect,
 
-    game_padding: f32,
-
     lobby: Lobby,
     chat: Chat,
+
+    game_result: Option<String>,
+    pub should_close: bool,
 }
 
 #[derive(Default)]
@@ -120,7 +125,6 @@ impl GameClient {
             w: screen_width() * 0.8,
             h: screen_height(),
         };
-        let game_padding = 25.0;
 
         let board_area = Rect::default();
 
@@ -136,17 +140,15 @@ impl GameClient {
 
             is_my_turn: false,
 
-            player_name: "Morbius".to_string(),
-            enemy_name: "Milo".to_string(),
-
             game_state: game_stage,
 
             game_area,
             board_area,
 
-            game_padding,
-
             chat,
+
+            game_result: None,
+            should_close: false,
         })
     }
 
@@ -202,8 +204,37 @@ impl GameClient {
         self.board.draw();
     }
 
-    fn draw_summary_screen(&self) {
-        todo!();
+    fn draw_summary_screen(&mut self) {
+        // this function doesn't only draw but i'm to lazy to change
+        // this name everywhere
+        let mut menu_builder = MenuBuilder::new(self.game_area.w, self.game_area.h * 0.1);
+        let menu_pos = vec2(self.game_area.x, self.game_area.y);
+
+        draw_rectangle(
+            menu_pos.x,
+            menu_pos.y,
+            self.game_area.w,
+            self.game_area.h,
+            GRAY,
+        );
+
+        Group::new(hash!(), vec2(self.game_area.w, self.game_area.h))
+            .position(menu_pos)
+            .ui(&mut root_ui(), |ui| {
+                menu_builder.label(ui, "Game ended!");
+
+                if let Some(result) = &self.game_result {
+                    menu_builder.label(ui, &result);
+                } else {
+                    menu_builder.label(ui, "Could not get result");
+                }
+
+                if menu_builder.button(ui, "Main menu") {
+                    // TODO! Should also close the connection
+                    // and cleanup
+                    self.should_close = true;
+                }
+            });
     }
 
     /* === UPDATING STUFF ==== */
@@ -219,7 +250,7 @@ impl GameClient {
                 self.board.update();
             }
 
-            ServerStage::End => todo!(),
+            ServerStage::End => {}
         }
 
         for key in get_keys_pressed() {
@@ -281,7 +312,18 @@ impl GameClient {
                     self.chat.push_message(sender, content);
                 }
 
-                ServerMessage::GameEnd { result: _ } => {
+                ServerMessage::GameEnd { result } => {
+                    self.game_result = match result {
+                        crate::logic::game_master::GameResult::Lost(uuid) => {
+                            if self.identity.clone().unwrap().id == uuid {
+                                Some("You lost!".to_string())
+                            } else {
+                                Some("You won!".to_string())
+                            }
+                        }
+                        crate::logic::game_master::GameResult::Draw => Some("Draw!".to_string()),
+                    };
+
                     self.game_state = ServerStage::End;
                 }
 

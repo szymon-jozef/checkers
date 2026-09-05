@@ -140,8 +140,24 @@ pub async fn main() {
             }
 
             GuiState::Game(client) => {
-                client.update();
-                client.draw();
+                while !client.should_close {
+                    draw_texture_ex(
+                        &background,
+                        0.0,
+                        0.0,
+                        WHITE,
+                        DrawTextureParams {
+                            dest_size: Some(vec2(screen_width(), screen_height())),
+                            ..DrawTextureParams::default()
+                        },
+                    );
+
+                    client.update();
+                    client.draw();
+                    next_frame().await;
+                }
+
+                state = GuiState::MainMenu;
             }
 
             GuiState::Exit => {
