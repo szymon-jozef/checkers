@@ -5,7 +5,7 @@ use macroquad::{
     math::vec2,
     shapes::draw_rectangle,
     ui::{hash, root_ui, widgets::Group},
-    window::{next_frame, screen_height, screen_width},
+    window::{screen_height, screen_width},
 };
 
 use crate::{
@@ -72,7 +72,7 @@ fn start_single(state: &mut GuiState, context: &GameContext) {
 
     let result = rx.recv();
 
-    if let Ok(result) = result {
+    if let Ok(_result) = result {
         connect_bot(context.difficulty);
     }
 

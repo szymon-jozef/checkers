@@ -110,8 +110,7 @@ where
 
         if let Err(e) = tcp.write_all(&msg).await {
             error!("Error while sending content to: {:?}\n{}", self.peer, e);
-            return;
-        };
+        }
     }
 
     pub async fn start_listening(&mut self) {
@@ -202,20 +201,20 @@ where
                         {
                             error!("Erro while sending message to main thread: {}", e);
                         }
-                        return Ok(());
+                        Ok(())
                     }
                     Err(e) => {
                         error!(
                             "Error while preparing message in read_content for sender: {}",
                             e
                         );
-                        return Ok(());
+                        Ok(())
                     }
                 }
             }
             Err(e) => {
                 error!("Error while getting the message from bits: {}", e);
-                return Ok(());
+                Ok(())
             }
         }
     }

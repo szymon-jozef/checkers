@@ -185,9 +185,9 @@ impl Board {
 
                 self.highlight_move_paths(from);
 
-                if let Some(field) = &self.get_clicked_field() {
-                    if let Some(available_moves) = &self.available_moves {
-                        if available_moves.iter().any(|available_move| {
+                if let Some(field) = &self.get_clicked_field()
+                    && let Some(available_moves) = &self.available_moves
+                        && available_moves.iter().any(|available_move| {
                             available_move.from == from
                                 && available_move.available_steps.contains(&field.pos)
                         }) {
@@ -197,8 +197,6 @@ impl Board {
                             });
                             self.state = BoardState::View;
                         }
-                    }
-                }
             }
 
             BoardState::ChooseCapture(from) => {
@@ -230,8 +228,8 @@ impl Board {
                     .copied()
                     .collect();
 
-                if let Some(clicked_field) = &self.get_clicked_field().map(|field| field.pos) {
-                    if possible_moves.iter().any(|possible_move| {
+                if let Some(clicked_field) = &self.get_clicked_field().map(|field| field.pos)
+                    && possible_moves.iter().any(|possible_move| {
                         if let Some(valid_move) = possible_move.get(self.current_deepness) {
                             valid_move == clicked_field
                         } else {
@@ -241,7 +239,6 @@ impl Board {
                         self.current_capture_path.push(*clicked_field);
                         self.current_deepness += 1;
                     }
-                }
 
                 if current_highlight.is_empty() {
                     debug!("Capture path complete!");
@@ -278,7 +275,6 @@ impl Board {
             && available_moves.iter().any(|path| path.from == from)
         {
             self.state = BoardState::ChooseMove(from);
-            return;
         }
     }
 
@@ -324,8 +320,8 @@ impl Board {
         for field in &self.board_view {
             let pos: Position = field.position;
 
-            let is_row_even: bool = pos.row % 2 == 0;
-            let is_column_even: bool = pos.column % 2 == 0;
+            let is_row_even: bool = pos.row.is_multiple_of(2);
+            let is_column_even: bool = pos.column.is_multiple_of(2);
             let is_field_black: bool = is_row_even ^ is_column_even;
 
             let abs_x = self.rect.x + pos.column as f32 * self.field_size;
@@ -453,9 +449,7 @@ impl Board {
             for available_move in available_moves {
                 self.fields[available_move.from].color = MOVE_HIGHLITGHT_COLOR;
             }
-
-            return;
-        };
+        }
     }
 
     fn highlight_move_paths(&mut self, from: Position) {

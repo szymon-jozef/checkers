@@ -129,7 +129,7 @@ impl Client {
 
     async fn send_message(&mut self, msg: Result<Message<ClientMessage>, postcard::Error>) {
         debug!("Sending message to the server!");
-        let _ = match msg {
+        match msg {
             Err(e) => {
                 error!("There was an error while creating the message: {}", e);
                 return;

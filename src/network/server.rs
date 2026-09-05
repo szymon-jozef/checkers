@@ -156,7 +156,7 @@ impl Server {
                             let reason = "There is currently game going and it doesn't allow spectators".to_string();
                             info!("Rejecting {}, because {}", addr, reason);
 
-                            let msg = Message::new(ServerMessage::DeclineHandshake { reason: reason });
+                            let msg = Message::new(ServerMessage::DeclineHandshake { reason });
 
                             if let Ok(msg) = msg {
                             let _ = sender.send(msg).await; // we can't use send_message because we
@@ -500,7 +500,6 @@ impl Server {
             }
             Err(e) => {
                 error!("Error while broadcasting the message: {}", e);
-                return;
             }
         }
     }

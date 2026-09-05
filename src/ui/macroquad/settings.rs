@@ -52,7 +52,7 @@ pub async fn draw_settings(
             menu_builder.label(ui, "TODO");
 
             if let Some(error_msg) = &context.latest_error_message {
-                menu_builder.label(ui, &error_msg);
+                menu_builder.label(ui, error_msg);
             }
 
             // Exit

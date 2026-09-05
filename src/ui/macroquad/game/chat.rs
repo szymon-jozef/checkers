@@ -1,4 +1,3 @@
-use log::debug;
 use macroquad::{
     color::{BLACK, WHITE},
     math::{Rect, vec2},
@@ -6,7 +5,7 @@ use macroquad::{
     text::measure_text,
     ui::{
         Skin, Ui, hash, root_ui,
-        widgets::{Group, InputText, Label},
+        widgets::{Group, InputText},
     },
     window::{screen_height, screen_width},
 };
@@ -86,7 +85,7 @@ impl Chat {
             .ui(&mut root_ui(), |ui| {
                 for message in &self.messages {
                     if prev_sender != message.sender {
-                        if prev_sender != "" {
+                        if !prev_sender.is_empty() {
                             // make space if it's not the first message
                             ui.label(None, "");
                         }
@@ -108,7 +107,7 @@ fn wrap_message(ui: &mut Ui, msg: &String, font_size: u16, chat_width: f32) {
     let mut buffer = String::new();
 
     if measure_text(msg, None, font_size, 1.0).width < chat_width {
-        ui.label(None, &msg);
+        ui.label(None, msg);
         return;
     }
 

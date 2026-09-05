@@ -1,9 +1,9 @@
 use macroquad::{
-    color::{BLACK, GRAY, WHITE},
+    color::GRAY,
     math::vec2,
     shapes::draw_rectangle,
-    ui::{Skin, hash, root_ui, widgets::Group},
-    window::{next_frame, screen_height, screen_width},
+    ui::{hash, root_ui, widgets::Group},
+    window::{screen_height, screen_width},
 };
 
 use crate::ui::{macroquad::menu_builder::MenuBuilder, state::GuiState};

@@ -105,7 +105,7 @@ impl GameMaster {
     fn is_player_lost(&self, player: &Player) -> bool {
         let player_pawns = self.board.get_player_pawns_positions(player);
 
-        player_pawns.len() == 0
+        player_pawns.is_empty()
             || player_pawns.iter().all(|pos| {
                 self.board.get_available_moves(*pos, player).is_none()
                     && self.board.get_available_captures(*pos, player).is_none()

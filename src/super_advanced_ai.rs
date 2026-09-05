@@ -66,12 +66,12 @@ impl Bot {
                             .choose(&mut rand::rng())
                             .expect("Could not get random move");
 
-                        client.send_move(rand_pawn.from, rand_move.clone()).await;
+                        client.send_move(rand_pawn.from, *rand_move).await;
                     }
                     crate::network::message::ServerMessage::BroadcastBoardState { board: _ } => {
                         info!("Got server state!");
 
-                        match dificulty.clone() {
+                        match dificulty {
                             BotDificulty::Easy => {} // we do nothing with it because easy bot
                             // just does random stuff. In future
                             // board_view can be used to calculate the

@@ -73,7 +73,7 @@ pub fn run_server(sender: Sender<()>) {
         let rt = tokio::runtime::Runtime::new().unwrap();
 
         let mut server = rt.block_on(Server::new());
-        let _ = rt.block_on(server.start());
+        rt.block_on(server.start());
 
         let _ = sender.send(());
 

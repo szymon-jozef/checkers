@@ -218,7 +218,7 @@ impl Board {
             from, to
         );
 
-        if !self.is_player_owner_of_the_pawn(player, &pawn) {
+        if !self.is_player_owner_of_the_pawn(player, pawn) {
             debug!("Player wasn't owner of the pawn...");
             return false;
         }
@@ -279,9 +279,8 @@ impl Board {
             let target_option: Option<Position> = current_pos.checked_add(direction);
 
             if let Some(target) = target_option
-                && self.can_capture(current_pos, target, player, captured_enemies, &pawn)
-            {
-                if let Some(path_after_capture) = target.checked_add(direction) {
+                && self.can_capture(current_pos, target, player, captured_enemies, pawn)
+                && let Some(path_after_capture) = target.checked_add(direction) {
                     debug!(
                         "Found possible capture: {} -> {}",
                         current_pos, path_after_capture
@@ -303,10 +302,9 @@ impl Board {
                         available_directions,
                         player,
                         all_paths,
-                        &pawn,
+                        pawn,
                     );
                 }
-            }
         }
 
         if !found_any_capture && !current_path.is_empty() && !captured_enemies.is_empty() {
@@ -415,7 +413,7 @@ impl Board {
             return false;
         }
 
-        if !self.is_player_owner_of_the_pawn(&player, self[from].pawn.as_ref().unwrap()) {
+        if !self.is_player_owner_of_the_pawn(player, self[from].pawn.as_ref().unwrap()) {
             warn!("Player {} tried moving a pawn which he doesn own!", player);
             debug!("Tried moving from {} to {}", from, to);
             return false;
@@ -462,7 +460,7 @@ impl Board {
             return false;
         }
 
-        if !self.is_player_owner_of_the_pawn(player, &pawn) {
+        if !self.is_player_owner_of_the_pawn(player, pawn) {
             warn!("Player {} tried moving a pawn which he doesn own!", player);
             return false;
         }
@@ -491,9 +489,9 @@ impl Board {
 impl Index<usize> for Board {
     type Output = [Field];
 
-    fn index<'a>(&'a self, i: usize) -> &'a [Field] {
-        let start = i * &self.size;
-        let end: usize = start + &self.size;
+    fn index(&self, i: usize) -> &[Field] {
+        let start = i * self.size;
+        let end: usize = start + self.size;
         &self.board[start..end]
     }
 }
@@ -507,9 +505,9 @@ impl Index<Position> for Board {
 }
 
 impl IndexMut<usize> for Board {
-    fn index_mut<'a>(&'a mut self, i: usize) -> &'a mut [Field] {
-        let start = i * &self.size;
-        let end: usize = start + &self.size;
+    fn index_mut(&mut self, i: usize) -> &mut [Field] {
+        let start = i * self.size;
+        let end: usize = start + self.size;
         &mut self.board[start..end]
     }
 }

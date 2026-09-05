@@ -3,7 +3,7 @@ use macroquad::{
     math::vec2,
     shapes::draw_rectangle,
     ui::{hash, root_ui, widgets::Group},
-    window::{next_frame, screen_height, screen_width},
+    window::{screen_height, screen_width},
 };
 
 use crate::ui::{

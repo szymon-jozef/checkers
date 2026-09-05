@@ -63,6 +63,7 @@ impl TryFrom<&str> for CliCommands {
     }
 }
 
+#[derive(Default)]
 struct ClientContext {
     pub identity: Option<NetworkIdentity>,
     pub is_my_turn: bool,
@@ -71,17 +72,6 @@ struct ClientContext {
     pub available_moves: Option<Vec<MovePath>>,
 }
 
-impl Default for ClientContext {
-    fn default() -> Self {
-        Self {
-            identity: None,
-            is_my_turn: false,
-
-            available_captures: None,
-            available_moves: None,
-        }
-    }
-}
 
 async fn run_bot() {
     let bot = Bot::new(BotDificulty::Easy).await;
@@ -106,11 +96,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         loop {
             let mut buffer = String::new();
-            if stdin.read_line(&mut buffer).is_ok() {
-                if stdin_sender.blocking_send(buffer).is_err() {
+            if stdin.read_line(&mut buffer).is_ok()
+                && stdin_sender.blocking_send(buffer).is_err() {
                     break;
                 }
-            }
         }
     });
 

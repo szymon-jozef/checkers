@@ -12,10 +12,7 @@ use macroquad::{
 use tokio::sync::mpsc::{Receiver, error::TryRecvError::Disconnected};
 
 use crate::{
-    logic::board::{
-        board_view::BoardView,
-        pawn::{CapturePath, MovePath},
-    },
+    logic::board::pawn::{CapturePath, MovePath},
     network::{
         client::Client, message::ServerMessage, network_identity::NetworkIdentity,
         server::ServerStage,
@@ -66,7 +63,7 @@ pub enum GuiCommands {
 }
 
 impl GameClient {
-    pub fn new(mut client: Client, context: &GameContext) -> Option<Self> {
+    pub fn new(mut client: Client, _context: &GameContext) -> Option<Self> {
         let Some(update_receiver) = client.get_update_receiver() else {
             return None;
         };
@@ -226,15 +223,11 @@ impl GameClient {
         }
 
         for key in get_keys_pressed() {
-            match key {
-                KeyCode::Enter => {
-                    self.chat.send_message(self.cmd_sender.clone()); // not sure about cloning this
-                    // every message sent. Maybe
-                    // Chat should have it's own
-                    // clone?
-                }
-
-                _ => {}
+            if key == KeyCode::Enter {
+                self.chat.send_message(self.cmd_sender.clone()); // not sure about cloning this
+                // every message sent. Maybe
+                // Chat should have it's own
+                // clone?
             }
         }
 
@@ -288,7 +281,7 @@ impl GameClient {
                     self.chat.push_message(sender, content);
                 }
 
-                ServerMessage::GameEnd { result } => {
+                ServerMessage::GameEnd { result: _ } => {
                     self.game_state = ServerStage::End;
                 }
 

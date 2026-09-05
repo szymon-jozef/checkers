@@ -5,7 +5,7 @@ use macroquad::{
     math::vec2,
     shapes::draw_rectangle,
     ui::{hash, root_ui, widgets::Group},
-    window::{next_frame, screen_height, screen_width},
+    window::{screen_height, screen_width},
 };
 
 use crate::ui::{
@@ -40,7 +40,7 @@ pub async fn draw_server_selection(state: &mut GuiState, context: &mut GameConte
 
                 let result = rx.recv();
 
-                if let Ok(result) = result {
+                if let Ok(_result) = result {
                     *state = GuiState::Connecting(connect_to_server());
                 }
             }
