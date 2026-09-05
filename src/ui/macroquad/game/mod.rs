@@ -1,3 +1,3 @@
-mod chat;
 mod board;
+mod chat;
 pub mod game;
