@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::logic::board::{board::Board, field::Field};
 
 /// View of the board, without any methods. Meant for sending over network
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct BoardView {
     pub board: Vec<Field>,
     pub size: usize,
@@ -24,10 +24,28 @@ impl From<Board> for BoardView {
 impl Index<usize> for BoardView {
     type Output = [Field];
 
-    fn index<'a>(&'a self, i: usize) -> &'a [Field] {
-        let start = i * &self.size;
-        let end: usize = start + &self.size;
+    fn index(&self, i: usize) -> &[Field] {
+        let start = i * self.size;
+        let end: usize = start + self.size;
         &self.board[start..end]
+    }
+}
+
+impl IntoIterator for BoardView {
+    type Item = Field;
+    type IntoIter = std::vec::IntoIter<Field>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.board.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a BoardView {
+    type Item = &'a Field;
+    type IntoIter = std::slice::Iter<'a, Field>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.board.iter()
     }
 }
 

@@ -129,7 +129,7 @@ impl Client {
 
     async fn send_message(&mut self, msg: Result<Message<ClientMessage>, postcard::Error>) {
         debug!("Sending message to the server!");
-        let _ = match msg {
+        match msg {
             Err(e) => {
                 error!("There was an error while creating the message: {}", e);
                 return;
@@ -137,10 +137,9 @@ impl Client {
             Ok(msg) => {
                 if let Err(e) = self.conn_sender_outgoing.send(msg).await {
                     error!("Error while sending a message to connection thread: {}", e);
-                    return;
                 }
             }
-        };
+        }
     }
 
     pub async fn send_capture(&mut self, capture_path: CapturePath) {
@@ -165,6 +164,12 @@ impl Client {
     pub async fn signal_readiness(&mut self) {
         debug!("Signaling readiness to the server...");
         let msg = Message::new(ClientMessage::SignalReadiness);
+        self.send_message(msg).await;
+    }
+
+    pub async fn revoke_readiness(&mut self) {
+        debug!("Revoking readiness and sending it to the server...");
+        let msg = Message::new(ClientMessage::SignalUnreadiness);
         self.send_message(msg).await;
     }
 

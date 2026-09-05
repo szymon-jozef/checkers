@@ -30,8 +30,9 @@ const MAX_PLAYABLE_CONNECTIONS: usize = 2; // DON'T EVER CHANGE THIS AS GAME OF 
 // There will be a spectator mode, hence the name __PLAYABLE__ connection. You will be able to have
 // more connections, but they won't be able to play
 
-#[derive(PartialEq)]
-enum ServerStage {
+#[derive(Debug, PartialEq, Default)]
+pub enum ServerStage {
+    #[default]
     Lobby,
     Game,
     End,
@@ -155,7 +156,7 @@ impl Server {
                             let reason = "There is currently game going and it doesn't allow spectators".to_string();
                             info!("Rejecting {}, because {}", addr, reason);
 
-                            let msg = Message::new(ServerMessage::DeclineHandshake { reason: reason });
+                            let msg = Message::new(ServerMessage::DeclineHandshake { reason });
 
                             if let Ok(msg) = msg {
                             let _ = sender.send(msg).await; // we can't use send_message because we
@@ -186,6 +187,10 @@ impl Server {
 
                                 ClientMessage::SignalReadiness => {
                                     self.handle_readiness(addr).await
+                                }
+
+                                ClientMessage::SignalUnreadiness => {
+                                    self.handle_unreadiness(addr).await;
                                 }
 
                                 ClientMessage::RequestCapture { capture_path } => {
@@ -336,6 +341,37 @@ impl Server {
         }
     }
 
+    async fn handle_unreadiness(&mut self, addr: SocketAddr) {
+        if !self.connections[&addr].is_handshaken {
+            warn!(
+                "Connection: {} tried revoking readiness, but hands were not shaken. Ignoring....",
+                addr
+            );
+            return;
+        }
+
+        if self.state.stage != ServerStage::Lobby {
+            warn!(
+                "Player {} tried revoking readiness, but game already started. Ignoring...",
+                addr
+            );
+            return;
+        }
+
+        self.state.ready_count -= 1;
+
+        self.connections
+            .get_mut(&addr)
+            .expect("Could not get the indentity of the player that wanted to revoke readinessl")
+            .identity
+            .is_ready = false;
+
+        info!(
+            "Player {} revoked his readiness. Currently ready: {}/{}",
+            addr, self.state.ready_count, MAX_PLAYABLE_CONNECTIONS
+        );
+    }
+
     /* === Sending messages === */
 
     ///  Should be used after every players move
@@ -464,7 +500,6 @@ impl Server {
             }
             Err(e) => {
                 error!("Error while broadcasting the message: {}", e);
-                return;
             }
         }
     }

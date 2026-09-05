@@ -79,6 +79,7 @@ impl Board {
     }
 
     /// For testing
+    #[allow(dead_code)]
     fn new_empty(player1: &mut Player, player2: &mut Player, size: Option<usize>) -> Self {
         debug!("Creating new empty board!");
         let size = size.unwrap_or(8);
@@ -104,6 +105,7 @@ impl Board {
         Board { board, size }
     }
 
+    #[allow(dead_code)]
     fn place_pawn(&mut self, target: Position, owner: &Player) {
         debug!("Placing new pawn by hand!");
         self[target].pawn = Some(Pawn::new(owner));
@@ -131,6 +133,7 @@ impl Board {
         pos.is_in_range(self.size) && self[pos].pawn.is_none()
     }
 
+    #[allow(dead_code)]
     fn is_pawn_movable(&self, pos: Position, player: &Player) -> bool {
         self.get_available_moves(pos, player)
             .is_some_and(|moves| !moves.is_empty())
@@ -218,7 +221,7 @@ impl Board {
             from, to
         );
 
-        if !self.is_player_owner_of_the_pawn(player, &pawn) {
+        if !self.is_player_owner_of_the_pawn(player, pawn) {
             debug!("Player wasn't owner of the pawn...");
             return false;
         }
@@ -279,33 +282,32 @@ impl Board {
             let target_option: Option<Position> = current_pos.checked_add(direction);
 
             if let Some(target) = target_option
-                && self.can_capture(current_pos, target, player, captured_enemies, &pawn)
+                && self.can_capture(current_pos, target, player, captured_enemies, pawn)
+                && let Some(path_after_capture) = target.checked_add(direction)
             {
-                if let Some(path_after_capture) = target.checked_add(direction) {
-                    debug!(
-                        "Found possible capture: {} -> {}",
-                        current_pos, path_after_capture
-                    );
+                debug!(
+                    "Found possible capture: {} -> {}",
+                    current_pos, path_after_capture
+                );
 
-                    found_any_capture = true;
+                found_any_capture = true;
 
-                    let mut new_path = current_path.clone();
-                    new_path.push(path_after_capture);
+                let mut new_path = current_path.clone();
+                new_path.push(path_after_capture);
 
-                    let mut new_enemies = captured_enemies.clone();
-                    new_enemies.push(target);
+                let mut new_enemies = captured_enemies.clone();
+                new_enemies.push(target);
 
-                    self.find_captures(
-                        start_pos,
-                        path_after_capture,
-                        &mut new_path,
-                        &new_enemies,
-                        available_directions,
-                        player,
-                        all_paths,
-                        &pawn,
-                    );
-                }
+                self.find_captures(
+                    start_pos,
+                    path_after_capture,
+                    &mut new_path,
+                    &new_enemies,
+                    available_directions,
+                    player,
+                    all_paths,
+                    pawn,
+                );
             }
         }
 
@@ -415,7 +417,7 @@ impl Board {
             return false;
         }
 
-        if !self.is_player_owner_of_the_pawn(&player, self[from].pawn.as_ref().unwrap()) {
+        if !self.is_player_owner_of_the_pawn(player, self[from].pawn.as_ref().unwrap()) {
             warn!("Player {} tried moving a pawn which he doesn own!", player);
             debug!("Tried moving from {} to {}", from, to);
             return false;
@@ -462,7 +464,7 @@ impl Board {
             return false;
         }
 
-        if !self.is_player_owner_of_the_pawn(player, &pawn) {
+        if !self.is_player_owner_of_the_pawn(player, pawn) {
             warn!("Player {} tried moving a pawn which he doesn own!", player);
             return false;
         }
@@ -491,9 +493,9 @@ impl Board {
 impl Index<usize> for Board {
     type Output = [Field];
 
-    fn index<'a>(&'a self, i: usize) -> &'a [Field] {
-        let start = i * &self.size;
-        let end: usize = start + &self.size;
+    fn index(&self, i: usize) -> &[Field] {
+        let start = i * self.size;
+        let end: usize = start + self.size;
         &self.board[start..end]
     }
 }
@@ -507,9 +509,9 @@ impl Index<Position> for Board {
 }
 
 impl IndexMut<usize> for Board {
-    fn index_mut<'a>(&'a mut self, i: usize) -> &'a mut [Field] {
-        let start = i * &self.size;
-        let end: usize = start + &self.size;
+    fn index_mut(&mut self, i: usize) -> &mut [Field] {
+        let start = i * self.size;
+        let end: usize = start + self.size;
         &mut self.board[start..end]
     }
 }

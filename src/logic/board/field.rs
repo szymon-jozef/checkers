@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::logic::{board::pawn::Pawn, math::position::Position};
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone, Default)]
 pub struct Field {
     pub position: Position,
     pub pawn: Option<Pawn>,
