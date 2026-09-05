@@ -72,7 +72,6 @@ struct ClientContext {
     pub available_moves: Option<Vec<MovePath>>,
 }
 
-
 async fn run_bot() {
     let bot = Bot::new(BotDificulty::Easy).await;
     bot.game_loop().await;
@@ -96,10 +95,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         loop {
             let mut buffer = String::new();
-            if stdin.read_line(&mut buffer).is_ok()
-                && stdin_sender.blocking_send(buffer).is_err() {
-                    break;
-                }
+            if stdin.read_line(&mut buffer).is_ok() && stdin_sender.blocking_send(buffer).is_err() {
+                break;
+            }
         }
     });
 

@@ -187,16 +187,17 @@ impl Board {
 
                 if let Some(field) = &self.get_clicked_field()
                     && let Some(available_moves) = &self.available_moves
-                        && available_moves.iter().any(|available_move| {
-                            available_move.from == from
-                                && available_move.available_steps.contains(&field.pos)
-                        }) {
-                            self.choosen_move = Some(MovePath {
-                                from,
-                                available_steps: vec![field.pos],
-                            });
-                            self.state = BoardState::View;
-                        }
+                    && available_moves.iter().any(|available_move| {
+                        available_move.from == from
+                            && available_move.available_steps.contains(&field.pos)
+                    })
+                {
+                    self.choosen_move = Some(MovePath {
+                        from,
+                        available_steps: vec![field.pos],
+                    });
+                    self.state = BoardState::View;
+                }
             }
 
             BoardState::ChooseCapture(from) => {
@@ -235,10 +236,11 @@ impl Board {
                         } else {
                             false
                         }
-                    }) {
-                        self.current_capture_path.push(*clicked_field);
-                        self.current_deepness += 1;
-                    }
+                    })
+                {
+                    self.current_capture_path.push(*clicked_field);
+                    self.current_deepness += 1;
+                }
 
                 if current_highlight.is_empty() {
                     debug!("Capture path complete!");

@@ -280,31 +280,32 @@ impl Board {
 
             if let Some(target) = target_option
                 && self.can_capture(current_pos, target, player, captured_enemies, pawn)
-                && let Some(path_after_capture) = target.checked_add(direction) {
-                    debug!(
-                        "Found possible capture: {} -> {}",
-                        current_pos, path_after_capture
-                    );
+                && let Some(path_after_capture) = target.checked_add(direction)
+            {
+                debug!(
+                    "Found possible capture: {} -> {}",
+                    current_pos, path_after_capture
+                );
 
-                    found_any_capture = true;
+                found_any_capture = true;
 
-                    let mut new_path = current_path.clone();
-                    new_path.push(path_after_capture);
+                let mut new_path = current_path.clone();
+                new_path.push(path_after_capture);
 
-                    let mut new_enemies = captured_enemies.clone();
-                    new_enemies.push(target);
+                let mut new_enemies = captured_enemies.clone();
+                new_enemies.push(target);
 
-                    self.find_captures(
-                        start_pos,
-                        path_after_capture,
-                        &mut new_path,
-                        &new_enemies,
-                        available_directions,
-                        player,
-                        all_paths,
-                        pawn,
-                    );
-                }
+                self.find_captures(
+                    start_pos,
+                    path_after_capture,
+                    &mut new_path,
+                    &new_enemies,
+                    available_directions,
+                    player,
+                    all_paths,
+                    pawn,
+                );
+            }
         }
 
         if !found_any_capture && !current_path.is_empty() && !captured_enemies.is_empty() {
