@@ -2,7 +2,7 @@ use checkers::ui::{
     macroquad::{
         difficulty_selection::draw_dificulty_selection, game::game::GameClient,
         main_menu::draw_main_menu, mode_selection::draw_mode_selection,
-        server_selection::draw_server_selection,
+        server_selection::draw_server_selection, settings::draw_settings,
     },
     state::{GameContext, GuiState},
 };
@@ -121,7 +121,7 @@ pub async fn main() {
             }
 
             GuiState::Settings => {
-                todo!();
+                draw_settings(&mut state).await;
             }
 
             GuiState::Game(client) => {
