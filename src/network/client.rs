@@ -137,10 +137,9 @@ impl Client {
             Ok(msg) => {
                 if let Err(e) = self.conn_sender_outgoing.send(msg).await {
                     error!("Error while sending a message to connection thread: {}", e);
-                    return;
                 }
             }
-        };
+        }
     }
 
     pub async fn send_capture(&mut self, capture_path: CapturePath) {

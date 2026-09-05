@@ -224,7 +224,7 @@ impl GameClient {
                 menu_builder.label(ui, "Game ended!");
 
                 if let Some(result) = &self.game_result {
-                    menu_builder.label(ui, &result);
+                    menu_builder.label(ui, result);
                 } else {
                     menu_builder.label(ui, "Could not get result");
                 }
