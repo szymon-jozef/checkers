@@ -61,20 +61,19 @@ pub async fn draw_settings(
                     Ok(result) => result,
 
                     Err(e) => {
-                        context.latest_error_message =
-                            Some(format!("Error while parsing url: {}", e));
+                        context.latest_error_message = Some(e.to_string());
                         return;
                     }
                 };
 
                 if let Err(e) = client_settings.save_to_file() {
-                    context.latest_error_message = Some(format!("Error: {}", e));
+                    context.latest_error_message = Some(e.to_string());
                     error!("Error while saving client settings to file: {}", e);
                     return;
                 }
 
                 if let Err(e) = server_settings.save_to_file() {
-                    context.latest_error_message = Some(format!("Error: {}", e));
+                    context.latest_error_message = Some(e.to_string());
                     error!("Error while saving server settings to file: {}", e);
                     return;
                 }
