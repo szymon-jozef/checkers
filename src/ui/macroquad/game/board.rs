@@ -47,10 +47,6 @@ impl GuiFieldVec {
     pub fn clear(&mut self) {
         self.gui_fields.clear();
     }
-
-    pub fn size(&self) -> usize {
-        self.gui_fields.len()
-    }
 }
 
 impl<'a> IntoIterator for &'a GuiFieldVec {

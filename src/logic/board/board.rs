@@ -79,6 +79,7 @@ impl Board {
     }
 
     /// For testing
+    #[allow(dead_code)]
     fn new_empty(player1: &mut Player, player2: &mut Player, size: Option<usize>) -> Self {
         debug!("Creating new empty board!");
         let size = size.unwrap_or(8);
@@ -104,6 +105,7 @@ impl Board {
         Board { board, size }
     }
 
+    #[allow(dead_code)]
     fn place_pawn(&mut self, target: Position, owner: &Player) {
         debug!("Placing new pawn by hand!");
         self[target].pawn = Some(Pawn::new(owner));
@@ -131,6 +133,7 @@ impl Board {
         pos.is_in_range(self.size) && self[pos].pawn.is_none()
     }
 
+    #[allow(dead_code)]
     fn is_pawn_movable(&self, pos: Position, player: &Player) -> bool {
         self.get_available_moves(pos, player)
             .is_some_and(|moves| !moves.is_empty())
